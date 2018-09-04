@@ -11,12 +11,14 @@ import (
 
 	"github.com/ortuman/jackal/component/httpupload"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module/xep0030/infoprovider"
 	"github.com/ortuman/jackal/xmpp"
 )
 
 type Component interface {
 	Host() string
 	ServiceName() string
+	InfoProvider() infoprovider.Provider
 	ProcessStanza(stanza xmpp.Stanza)
 }
 
@@ -35,9 +37,11 @@ func Initialize(cfg *Config) {
 	if initialized {
 		return
 	}
-	comps = make(map[string]Component)
+	shutdownCh = make(chan struct{})
 
 	cs := loadComponents(cfg)
+
+	comps = make(map[string]Component)
 	for _, c := range cs {
 		host := c.Host()
 		if _, ok := comps[host]; ok {
@@ -84,8 +88,6 @@ func GetAll() []Component {
 }
 
 func loadComponents(cfg *Config) []Component {
-	shutdownCh = make(chan struct{})
-
 	var ret []Component
 	if cfg.HttpUpload != nil {
 		ret = append(ret, httpupload.New(cfg.HttpUpload, shutdownCh))

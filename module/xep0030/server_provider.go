@@ -8,6 +8,8 @@ package xep0030
 import (
 	"sync"
 
+	"github.com/ortuman/jackal/module/xep0030/infoprovider"
+
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model/rostermodel"
@@ -19,37 +21,37 @@ import (
 
 type serverProvider struct {
 	mu              sync.RWMutex
-	serverFeatures  []Feature
-	accountFeatures []Feature
+	serverFeatures  []infoprovider.Feature
+	accountFeatures []infoprovider.Feature
 }
 
-func (sp *serverProvider) Identities(toJID, fromJID *jid.JID, node string) []Identity {
+func (sp *serverProvider) Identities(toJID, fromJID *jid.JID, node string) []infoprovider.Identity {
 	if node != "" {
 		return nil
 	}
 	if toJID.IsServer() {
-		return []Identity{{Type: "im", Category: "server", Name: "jackal"}}
+		return []infoprovider.Identity{{Type: "im", Category: "server", Name: "jackal"}}
 	} else {
-		return []Identity{{Type: "registered", Category: "account"}}
+		return []infoprovider.Identity{{Type: "registered", Category: "account"}}
 	}
 }
 
-func (sp *serverProvider) Items(toJID, fromJID *jid.JID, node string) ([]Item, *xmpp.StanzaError) {
+func (sp *serverProvider) Items(toJID, fromJID *jid.JID, node string) ([]infoprovider.Item, *xmpp.StanzaError) {
 	if node != "" {
 		return nil, nil
 	}
-	var itms []Item
+	var itms []infoprovider.Item
 	if toJID.IsServer() {
-		itms = append(itms, Item{Jid: fromJID.ToBareJID().String()})
+		itms = append(itms, infoprovider.Item{Jid: fromJID.ToBareJID().String()})
 		for _, comp := range component.GetAll() {
-			itms = append(itms, Item{Jid: comp.Host(), Name: comp.ServiceName()})
+			itms = append(itms, infoprovider.Item{Jid: comp.Host(), Name: comp.ServiceName()})
 		}
 	} else {
 		// add account resources
 		if sp.isSubscribedTo(toJID, fromJID) {
 			stms := router.UserStreams(toJID.Node())
 			for _, stm := range stms {
-				itms = append(itms, Item{Jid: stm.JID().String()})
+				itms = append(itms, infoprovider.Item{Jid: stm.JID().String()})
 			}
 		} else {
 			return nil, xmpp.ErrSubscriptionRequired
@@ -58,7 +60,7 @@ func (sp *serverProvider) Items(toJID, fromJID *jid.JID, node string) ([]Item, *
 	return itms, nil
 }
 
-func (sp *serverProvider) Features(toJID, fromJID *jid.JID, node string) ([]Feature, *xmpp.StanzaError) {
+func (sp *serverProvider) Features(toJID, fromJID *jid.JID, node string) ([]infoprovider.Feature, *xmpp.StanzaError) {
 	sp.mu.RLock()
 	defer sp.mu.RUnlock()
 	if node != "" {
@@ -74,7 +76,7 @@ func (sp *serverProvider) Features(toJID, fromJID *jid.JID, node string) ([]Feat
 	}
 }
 
-func (sp *serverProvider) registerServerFeature(feature Feature) {
+func (sp *serverProvider) registerServerFeature(feature infoprovider.Feature) {
 	sp.mu.Lock()
 	defer sp.mu.Unlock()
 	for _, f := range sp.serverFeatures {
@@ -85,7 +87,7 @@ func (sp *serverProvider) registerServerFeature(feature Feature) {
 	sp.serverFeatures = append(sp.serverFeatures, feature)
 }
 
-func (sp *serverProvider) unregisterServerFeature(feature Feature) {
+func (sp *serverProvider) unregisterServerFeature(feature infoprovider.Feature) {
 	sp.mu.Lock()
 	defer sp.mu.Unlock()
 	for i, f := range sp.serverFeatures {
@@ -96,7 +98,7 @@ func (sp *serverProvider) unregisterServerFeature(feature Feature) {
 	}
 }
 
-func (sp *serverProvider) registerAccountFeature(feature Feature) {
+func (sp *serverProvider) registerAccountFeature(feature infoprovider.Feature) {
 	sp.mu.Lock()
 	defer sp.mu.Unlock()
 	for _, f := range sp.accountFeatures {
@@ -107,7 +109,7 @@ func (sp *serverProvider) registerAccountFeature(feature Feature) {
 	sp.accountFeatures = append(sp.accountFeatures, feature)
 }
 
-func (sp *serverProvider) unregisterAccountFeature(feature Feature) {
+func (sp *serverProvider) unregisterAccountFeature(feature infoprovider.Feature) {
 	sp.mu.Lock()
 	defer sp.mu.Unlock()
 	for i, f := range sp.accountFeatures {

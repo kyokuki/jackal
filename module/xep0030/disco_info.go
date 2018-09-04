@@ -8,7 +8,10 @@ package xep0030
 import (
 	"sync"
 
+	"github.com/ortuman/jackal/component"
+
 	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/module/xep0030/infoprovider"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -21,51 +24,18 @@ const (
 	discoItemsNamespace = "http://jabber.org/protocol/disco#items"
 )
 
-// Feature represents a disco info feature entity.
-type Feature = string
-
-// Identity represents a disco info identity entity.
-type Identity struct {
-	Category string
-	Type     string
-	Name     string
-}
-
-// Item represents a disco info item entity.
-type Item struct {
-	Jid  string
-	Name string
-	Node string
-}
-
-// Provider represents a generic disco info domain provider.
-type Provider interface {
-	// Identities returns all identities associated to the provider.
-	Identities(toJID, fromJID *jid.JID, node string) []Identity
-
-	// Items returns all items associated to the provider.
-	// A proper stanza error should be returned in case an error occurs.
-	Items(toJID, fromJID *jid.JID, node string) ([]Item, *xmpp.StanzaError)
-
-	// Features returns all features associated to the provider.
-	// A proper stanza error should be returned in case an error occurs.
-	Features(toJID, fromJID *jid.JID, node string) ([]Feature, *xmpp.StanzaError)
-}
-
 // DiscoInfo represents a disco info server stream module.
 type DiscoInfo struct {
 	mu          sync.RWMutex
 	actorCh     chan func()
 	shutdownCh  <-chan struct{}
 	srvProvider *serverProvider
-	providers   map[string]Provider
 }
 
 // New returns a disco info IQ handler module.
 func New(shutdownCh <-chan struct{}) *DiscoInfo {
 	di := &DiscoInfo{
 		srvProvider: &serverProvider{},
-		providers:   make(map[string]Provider),
 		actorCh:     make(chan func(), mailboxSize),
 		shutdownCh:  shutdownCh,
 	}
@@ -95,20 +65,6 @@ func (di *DiscoInfo) RegisterAccountFeature(feature string) {
 // UnregisterAccountFeature unregisters a previous registered account feature.
 func (di *DiscoInfo) UnregisterAccountFeature(feature string) {
 	di.srvProvider.unregisterAccountFeature(feature)
-}
-
-// RegisterProvider registers a new disco info provider given a domain name.
-func (di *DiscoInfo) RegisterProvider(domain string, provider Provider) {
-	di.mu.Lock()
-	defer di.mu.Unlock()
-	di.providers[domain] = provider
-}
-
-// UnregisterProvider unregisters a previously registered disco info provider.
-func (di *DiscoInfo) UnregisterProvider(domain string) {
-	di.mu.Lock()
-	defer di.mu.Unlock()
-	delete(di.providers, domain)
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -143,15 +99,18 @@ func (di *DiscoInfo) processIQ(iq *xmpp.IQ, stm stream.C2S) {
 	fromJID := iq.FromJID()
 	toJID := iq.ToJID()
 
-	var prov Provider
+	var prov infoprovider.Provider
 	if host.IsLocalHost(toJID.Domain()) {
 		prov = di.srvProvider
 	} else {
-		prov = di.providers[toJID.Domain()]
-		if prov == nil {
-			stm.SendElement(iq.ItemNotFoundError())
-			return
+		// look for component info provider
+		if comp := component.Get(toJID.Domain()); comp != nil {
+			prov = comp.InfoProvider()
 		}
+	}
+	if prov == nil {
+		stm.SendElement(iq.ItemNotFoundError())
+		return
 	}
 	q := iq.Elements().Child("query")
 	node := q.Attributes().Get("node")
@@ -168,7 +127,7 @@ func (di *DiscoInfo) processIQ(iq *xmpp.IQ, stm stream.C2S) {
 	stm.SendElement(iq.BadRequestError())
 }
 
-func (di *DiscoInfo) sendDiscoInfo(prov Provider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.C2S) {
+func (di *DiscoInfo) sendDiscoInfo(prov infoprovider.Provider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.C2S) {
 	features, sErr := prov.Features(toJID, fromJID, node)
 	if sErr != nil {
 		stm.SendElement(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
@@ -201,7 +160,7 @@ func (di *DiscoInfo) sendDiscoInfo(prov Provider, toJID, fromJID *jid.JID, node 
 	stm.SendElement(result)
 }
 
-func (di *DiscoInfo) sendDiscoItems(prov Provider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.C2S) {
+func (di *DiscoInfo) sendDiscoItems(prov infoprovider.Provider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.C2S) {
 	items, sErr := prov.Items(toJID, fromJID, node)
 	if sErr != nil {
 		stm.SendElement(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
