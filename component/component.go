@@ -18,13 +18,13 @@ type Component interface {
 	Host() string
 	ServiceName() string
 	ProcessStanza(stanza xmpp.Stanza)
-	Shutdown()
 }
 
 // singleton interface
 var (
 	instMu      sync.RWMutex
 	comps       map[string]Component
+	shutdownCh  chan struct{}
 	initialized bool
 )
 
@@ -56,9 +56,7 @@ func Shutdown() {
 	if !initialized {
 		return
 	}
-	for _, comp := range comps {
-		comp.Shutdown()
-	}
+	close(shutdownCh)
 	comps = nil
 	initialized = false
 }
@@ -86,9 +84,11 @@ func GetAll() []Component {
 }
 
 func loadComponents(cfg *Config) []Component {
+	shutdownCh = make(chan struct{})
+
 	var ret []Component
 	if cfg.HttpUpload != nil {
-		ret = append(ret, httpupload.New(cfg.HttpUpload))
+		ret = append(ret, httpupload.New(cfg.HttpUpload, shutdownCh))
 	}
 	return ret
 }

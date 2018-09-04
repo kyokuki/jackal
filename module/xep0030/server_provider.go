@@ -8,6 +8,7 @@ package xep0030
 import (
 	"sync"
 
+	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/router"
@@ -40,7 +41,9 @@ func (sp *serverProvider) Items(toJID, fromJID *jid.JID, node string) ([]Item, *
 	var itms []Item
 	if toJID.IsServer() {
 		itms = append(itms, Item{Jid: fromJID.ToBareJID().String()})
-		// TODO(ortuman): add component domains
+		for _, comp := range component.GetAll() {
+			itms = append(itms, Item{Jid: comp.Host(), Name: comp.ServiceName()})
+		}
 	} else {
 		// add account resources
 		if sp.isSubscribedTo(toJID, fromJID) {

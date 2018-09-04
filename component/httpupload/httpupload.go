@@ -13,18 +13,23 @@ const mailboxSize = 1024
 
 const httpUploadServiceName = "HTTP File Upload"
 
+const httpUploadFeature = "urn:xmpp:http:upload:0"
+
 type HttpUpload struct {
-	cfg     *Config
-	actorCh chan func()
-	closeCh chan struct{}
+	cfg        *Config
+	actorCh    chan func()
+	shutdownCh <-chan struct{}
 }
 
-func New(cfg *Config) *HttpUpload {
+func New(cfg *Config, shutdownCh <-chan struct{}) *HttpUpload {
 	h := &HttpUpload{
-		cfg:     cfg,
-		actorCh: make(chan func(), mailboxSize),
-		closeCh: make(chan struct{}),
+		cfg:        cfg,
+		actorCh:    make(chan func(), mailboxSize),
+		shutdownCh: shutdownCh,
 	}
+	// register disco info provider
+	// module.Modules().DiscoInfo.RegisterProvider(h.Host(), &infoProvider{})
+
 	go h.loop()
 	return h
 }
@@ -43,15 +48,12 @@ func (c *HttpUpload) ProcessStanza(stanza xmpp.Stanza) {
 	}
 }
 
-func (c *HttpUpload) Shutdown() {
-}
-
 func (c *HttpUpload) loop() {
 	for {
 		select {
 		case f := <-c.actorCh:
 			f()
-		case <-c.closeCh:
+		case <-c.shutdownCh:
 			return
 		}
 	}
