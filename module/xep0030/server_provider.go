@@ -40,7 +40,8 @@ func (sp *serverProvider) Items(toJID, fromJID *jid.JID, node string) ([]Item, *
 	}
 	var itms []Item
 	if toJID.IsServer() {
-		itms = sp.serverItems
+		itms = append(itms, Item{Jid: fromJID.ToBareJID().String()})
+		itms = append(itms, sp.serverItems...)
 	} else {
 		// add account resources
 		if sp.isSubscribedTo(toJID, fromJID) {
