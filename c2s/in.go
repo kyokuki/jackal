@@ -387,7 +387,7 @@ func (s *inStream) handleSessionStarted(elem xmpp.XElement) {
 		return
 	}
 	if comp := component.Get(stanza.ToJID().Domain()); comp != nil { // component stanza?
-		comp.ProcessStanza(stanza)
+		comp.ProcessStanza(stanza, s)
 	} else {
 		s.processStanza(stanza)
 	}

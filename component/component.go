@@ -9,17 +9,17 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/ortuman/jackal/stream"
+
 	"github.com/ortuman/jackal/component/httpupload"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/module/xep0030/infoprovider"
+	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/xmpp"
 )
 
 type Component interface {
 	Host() string
-	ServiceName() string
-	InfoProvider() infoprovider.Provider
-	ProcessStanza(stanza xmpp.Stanza)
+	ProcessStanza(stanza xmpp.Stanza, stm stream.C2S)
 }
 
 // singleton interface
@@ -88,9 +88,11 @@ func GetAll() []Component {
 }
 
 func loadComponents(cfg *Config) []Component {
+	discoInfo := module.Modules().DiscoInfo
+
 	var ret []Component
 	if cfg.HttpUpload != nil {
-		ret = append(ret, httpupload.New(cfg.HttpUpload, shutdownCh))
+		ret = append(ret, httpupload.New(cfg.HttpUpload, discoInfo, shutdownCh))
 	}
 	return ret
 }

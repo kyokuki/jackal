@@ -1,4 +1,9 @@
-package infoprovider
+/*
+ * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
+package xep0030
 
 import (
 	"github.com/ortuman/jackal/xmpp"
@@ -22,8 +27,8 @@ type Item struct {
 	Node string
 }
 
-// Provider represents a generic disco info domain provider.
-type Provider interface {
+// InfoProvider represents a generic disco info domain provider.
+type InfoProvider interface {
 	// Identities returns all identities associated to the provider.
 	Identities(toJID, fromJID *jid.JID, node string) []Identity
 

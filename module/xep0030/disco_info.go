@@ -8,10 +8,7 @@ package xep0030
 import (
 	"sync"
 
-	"github.com/ortuman/jackal/component"
-
 	"github.com/ortuman/jackal/host"
-	"github.com/ortuman/jackal/module/xep0030/infoprovider"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -27,15 +24,17 @@ const (
 // DiscoInfo represents a disco info server stream module.
 type DiscoInfo struct {
 	mu          sync.RWMutex
+	srvProvider *serverProvider
+	providers   map[string]InfoProvider
 	actorCh     chan func()
 	shutdownCh  <-chan struct{}
-	srvProvider *serverProvider
 }
 
 // New returns a disco info IQ handler module.
 func New(shutdownCh <-chan struct{}) *DiscoInfo {
 	di := &DiscoInfo{
 		srvProvider: &serverProvider{},
+		providers:   make(map[string]InfoProvider),
 		actorCh:     make(chan func(), mailboxSize),
 		shutdownCh:  shutdownCh,
 	}
@@ -47,12 +46,22 @@ func New(shutdownCh <-chan struct{}) *DiscoInfo {
 	return di
 }
 
+// RegisterServerItem registers a new item associated to server domain.
+func (di *DiscoInfo) RegisterServerItem(item Item) {
+	di.srvProvider.registerServerItem(item)
+}
+
+// UnregisterServerItem unregisters a previously registered server item.
+func (di *DiscoInfo) UnregisterServerItem(item Item) {
+	di.srvProvider.unregisterServerItem(item)
+}
+
 // RegisterServerFeature registers a new feature associated to server domain.
 func (di *DiscoInfo) RegisterServerFeature(feature string) {
 	di.srvProvider.registerServerFeature(feature)
 }
 
-// UnregisterServerFeature unregisters a previous registered server feature.
+// UnregisterServerFeature unregisters a previously registered server feature.
 func (di *DiscoInfo) UnregisterServerFeature(feature string) {
 	di.srvProvider.unregisterServerFeature(feature)
 }
@@ -62,9 +71,23 @@ func (di *DiscoInfo) RegisterAccountFeature(feature string) {
 	di.srvProvider.registerAccountFeature(feature)
 }
 
-// UnregisterAccountFeature unregisters a previous registered account feature.
+// UnregisterAccountFeature unregisters a previously registered account feature.
 func (di *DiscoInfo) UnregisterAccountFeature(feature string) {
 	di.srvProvider.unregisterAccountFeature(feature)
+}
+
+// RegisterProvider registers a new disco info provider associated to a domain.
+func (di *DiscoInfo) RegisterProvider(domain string, provider InfoProvider) {
+	di.mu.Lock()
+	defer di.mu.Unlock()
+	di.providers[domain] = provider
+}
+
+// UnregisterProvider unregisters a previously registered disco info provider.
+func (di *DiscoInfo) UnregisterProvider(domain string) {
+	di.mu.Lock()
+	defer di.mu.Unlock()
+	delete(di.providers, domain)
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -99,13 +122,14 @@ func (di *DiscoInfo) processIQ(iq *xmpp.IQ, stm stream.C2S) {
 	fromJID := iq.FromJID()
 	toJID := iq.ToJID()
 
-	var prov infoprovider.Provider
+	var prov InfoProvider
 	if host.IsLocalHost(toJID.Domain()) {
 		prov = di.srvProvider
 	} else {
-		// look for component info provider
-		if comp := component.Get(toJID.Domain()); comp != nil {
-			prov = comp.InfoProvider()
+		prov = di.providers[toJID.Domain()]
+		if prov == nil {
+			stm.SendElement(iq.ItemNotFoundError())
+			return
 		}
 	}
 	if prov == nil {
@@ -127,7 +151,7 @@ func (di *DiscoInfo) processIQ(iq *xmpp.IQ, stm stream.C2S) {
 	stm.SendElement(iq.BadRequestError())
 }
 
-func (di *DiscoInfo) sendDiscoInfo(prov infoprovider.Provider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.C2S) {
+func (di *DiscoInfo) sendDiscoInfo(prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.C2S) {
 	features, sErr := prov.Features(toJID, fromJID, node)
 	if sErr != nil {
 		stm.SendElement(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
@@ -160,13 +184,10 @@ func (di *DiscoInfo) sendDiscoInfo(prov infoprovider.Provider, toJID, fromJID *j
 	stm.SendElement(result)
 }
 
-func (di *DiscoInfo) sendDiscoItems(prov infoprovider.Provider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.C2S) {
+func (di *DiscoInfo) sendDiscoItems(prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.C2S) {
 	items, sErr := prov.Items(toJID, fromJID, node)
 	if sErr != nil {
 		stm.SendElement(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
-		return
-	} else if len(items) == 0 {
-		stm.SendElement(iq.ItemNotFoundError())
 		return
 	}
 	result := iq.ResultIQ()

@@ -8,9 +8,6 @@ package xep0030
 import (
 	"sync"
 
-	"github.com/ortuman/jackal/module/xep0030/infoprovider"
-
-	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/router"
@@ -21,37 +18,35 @@ import (
 
 type serverProvider struct {
 	mu              sync.RWMutex
-	serverFeatures  []infoprovider.Feature
-	accountFeatures []infoprovider.Feature
+	serverItems     []Item
+	serverFeatures  []Feature
+	accountFeatures []Feature
 }
 
-func (sp *serverProvider) Identities(toJID, fromJID *jid.JID, node string) []infoprovider.Identity {
+func (sp *serverProvider) Identities(toJID, fromJID *jid.JID, node string) []Identity {
 	if node != "" {
 		return nil
 	}
 	if toJID.IsServer() {
-		return []infoprovider.Identity{{Type: "im", Category: "server", Name: "jackal"}}
+		return []Identity{{Type: "im", Category: "server", Name: "jackal"}}
 	} else {
-		return []infoprovider.Identity{{Type: "registered", Category: "account"}}
+		return []Identity{{Type: "registered", Category: "account"}}
 	}
 }
 
-func (sp *serverProvider) Items(toJID, fromJID *jid.JID, node string) ([]infoprovider.Item, *xmpp.StanzaError) {
+func (sp *serverProvider) Items(toJID, fromJID *jid.JID, node string) ([]Item, *xmpp.StanzaError) {
 	if node != "" {
 		return nil, nil
 	}
-	var itms []infoprovider.Item
+	var itms []Item
 	if toJID.IsServer() {
-		itms = append(itms, infoprovider.Item{Jid: fromJID.ToBareJID().String()})
-		for _, comp := range component.GetAll() {
-			itms = append(itms, infoprovider.Item{Jid: comp.Host(), Name: comp.ServiceName()})
-		}
+		itms = sp.serverItems
 	} else {
 		// add account resources
 		if sp.isSubscribedTo(toJID, fromJID) {
 			stms := router.UserStreams(toJID.Node())
 			for _, stm := range stms {
-				itms = append(itms, infoprovider.Item{Jid: stm.JID().String()})
+				itms = append(itms, Item{Jid: stm.JID().String()})
 			}
 		} else {
 			return nil, xmpp.ErrSubscriptionRequired
@@ -60,7 +55,7 @@ func (sp *serverProvider) Items(toJID, fromJID *jid.JID, node string) ([]infopro
 	return itms, nil
 }
 
-func (sp *serverProvider) Features(toJID, fromJID *jid.JID, node string) ([]infoprovider.Feature, *xmpp.StanzaError) {
+func (sp *serverProvider) Features(toJID, fromJID *jid.JID, node string) ([]Feature, *xmpp.StanzaError) {
 	sp.mu.RLock()
 	defer sp.mu.RUnlock()
 	if node != "" {
@@ -76,7 +71,29 @@ func (sp *serverProvider) Features(toJID, fromJID *jid.JID, node string) ([]info
 	}
 }
 
-func (sp *serverProvider) registerServerFeature(feature infoprovider.Feature) {
+func (sp *serverProvider) registerServerItem(item Item) {
+	sp.mu.Lock()
+	defer sp.mu.Unlock()
+	for _, itm := range sp.serverItems {
+		if itm.Jid == item.Jid && itm.Name == item.Name && itm.Node == item.Node {
+			return // already registered
+		}
+	}
+	sp.serverItems = append(sp.serverItems, item)
+}
+
+func (sp *serverProvider) unregisterServerItem(item Item) {
+	sp.mu.Lock()
+	defer sp.mu.Unlock()
+	for i, itm := range sp.serverItems {
+		if itm.Jid == item.Jid && itm.Name == item.Name && itm.Node == item.Node {
+			sp.serverItems = append(sp.serverItems[:i], sp.serverItems[i+1:]...)
+			return
+		}
+	}
+}
+
+func (sp *serverProvider) registerServerFeature(feature Feature) {
 	sp.mu.Lock()
 	defer sp.mu.Unlock()
 	for _, f := range sp.serverFeatures {
@@ -87,7 +104,7 @@ func (sp *serverProvider) registerServerFeature(feature infoprovider.Feature) {
 	sp.serverFeatures = append(sp.serverFeatures, feature)
 }
 
-func (sp *serverProvider) unregisterServerFeature(feature infoprovider.Feature) {
+func (sp *serverProvider) unregisterServerFeature(feature Feature) {
 	sp.mu.Lock()
 	defer sp.mu.Unlock()
 	for i, f := range sp.serverFeatures {
@@ -98,7 +115,7 @@ func (sp *serverProvider) unregisterServerFeature(feature infoprovider.Feature) 
 	}
 }
 
-func (sp *serverProvider) registerAccountFeature(feature infoprovider.Feature) {
+func (sp *serverProvider) registerAccountFeature(feature Feature) {
 	sp.mu.Lock()
 	defer sp.mu.Unlock()
 	for _, f := range sp.accountFeatures {
@@ -109,7 +126,7 @@ func (sp *serverProvider) registerAccountFeature(feature infoprovider.Feature) {
 	sp.accountFeatures = append(sp.accountFeatures, feature)
 }
 
-func (sp *serverProvider) unregisterAccountFeature(feature infoprovider.Feature) {
+func (sp *serverProvider) unregisterAccountFeature(feature Feature) {
 	sp.mu.Lock()
 	defer sp.mu.Unlock()
 	for i, f := range sp.accountFeatures {

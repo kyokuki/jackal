@@ -11,6 +11,7 @@ import (
 
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/model/rostermodel"
+	"github.com/ortuman/jackal/module/xep0030/infoprovider"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
@@ -31,19 +32,19 @@ func TestServerProvider_Features(t *testing.T) {
 	}()
 
 	var sp serverProvider
-	sp.registerServerFeature("sf0")
-	sp.registerServerFeature("sf1")
-	sp.registerServerFeature("sf1")
-	sp.registerAccountFeature("af0")
-	sp.registerAccountFeature("af1")
-	sp.registerAccountFeature("af1")
-	require.Equal(t, sp.serverFeatures, []Feature{"sf0", "sf1"})
-	require.Equal(t, sp.accountFeatures, []Feature{"af0", "af1"})
+	sp.RegisterServerFeature("sf0")
+	sp.RegisterServerFeature("sf1")
+	sp.RegisterServerFeature("sf1")
+	sp.RegisterServerFeature("af0")
+	sp.RegisterServerFeature("af1")
+	sp.RegisterServerFeature("af1")
+	require.Equal(t, sp.serverFeatures, []infoprovider.Feature{"sf0", "sf1"})
+	require.Equal(t, sp.accountFeatures, []infoprovider.Feature{"af0", "af1"})
 
-	sp.unregisterServerFeature("sf1")
-	sp.unregisterAccountFeature("af0")
-	require.Equal(t, sp.serverFeatures, []Feature{"sf0"})
-	require.Equal(t, sp.accountFeatures, []Feature{"af1"})
+	sp.UnregisterServerFeature("sf1")
+	sp.UnregisterAccountFeature("af0")
+	require.Equal(t, sp.serverFeatures, []infoprovider.Feature{"sf0"})
+	require.Equal(t, sp.accountFeatures, []infoprovider.Feature{"af1"})
 
 	srvJID, _ := jid.New("", "jackal.im", "", true)
 	accJID, _ := jid.New("ortuman", "jackal.im", "garden", true)
@@ -54,11 +55,11 @@ func TestServerProvider_Features(t *testing.T) {
 	require.Nil(t, sErr)
 
 	features, sErr = sp.Features(srvJID, accJID, "")
-	require.Equal(t, features, []Feature{"sf0"})
+	require.Equal(t, features, []infoprovider.Feature{"sf0"})
 	require.Nil(t, sErr)
 
 	features, sErr = sp.Features(accJID.ToBareJID(), accJID, "")
-	require.Equal(t, features, []Feature{"af1"})
+	require.Equal(t, features, []infoprovider.Feature{"af1"})
 	require.Nil(t, sErr)
 
 	features, sErr = sp.Features(accJID2.ToBareJID(), accJID, "")
@@ -73,10 +74,10 @@ func TestServerProvider_Identities(t *testing.T) {
 	accJID, _ := jid.New("ortuman", "jackal.im", "garden", true)
 	require.Nil(t, sp.Identities(srvJID, accJID, "node"))
 
-	require.Equal(t, sp.Identities(srvJID, accJID, ""), []Identity{
+	require.Equal(t, sp.Identities(srvJID, accJID, ""), []infoprovider.Identity{
 		{Type: "im", Category: "server", Name: "jackal"},
 	})
-	require.Equal(t, sp.Identities(accJID.ToBareJID(), accJID, ""), []Identity{
+	require.Equal(t, sp.Identities(accJID.ToBareJID(), accJID, ""), []infoprovider.Identity{
 		{Type: "registered", Category: "account"},
 	})
 }
@@ -111,7 +112,7 @@ func TestServerProvider_Items(t *testing.T) {
 	require.Nil(t, sErr)
 
 	items, sErr = sp.Items(srvJID, accJID1, "")
-	require.Equal(t, items, []Item{
+	require.Equal(t, items, []infoprovider.Item{
 		{Jid: accJID1.ToBareJID().String()},
 	})
 	require.Nil(t, sErr)
@@ -128,7 +129,7 @@ func TestServerProvider_Items(t *testing.T) {
 	items, sErr = sp.Items(accJID2.ToBareJID(), accJID1, "")
 	sort.Slice(items, func(i, j int) bool { return items[i].Jid < items[j].Jid })
 
-	require.Equal(t, items, []Item{
+	require.Equal(t, items, []infoprovider.Item{
 		{Jid: accJID2.String()}, {Jid: accJID3.String()},
 	})
 	require.Nil(t, sErr)
