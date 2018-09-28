@@ -1,4 +1,4 @@
-package form
+package xep0004
 
 import (
 	"testing"
