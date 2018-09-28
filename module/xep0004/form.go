@@ -11,11 +11,13 @@ type Form struct {
 }
 
 func New(ftype string, title string, instruction string) *Form {
-	return &Form{
+	f := &Form{
 		instruction: instruction,
 		title:       title,
 		ftype:       ftype,
 	}
+	f.fields.Init()
+	return f
 }
 
 func NewFormFromElement(element *xmpp.Element) *Form {
