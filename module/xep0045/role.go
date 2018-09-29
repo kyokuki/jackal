@@ -20,7 +20,7 @@ type rolePrivileges struct {
 	inviteOtherUsers                bool
 	sendMessagesToAll               bool
 	modifySubject                   bool
-	kickParticipantsAndVitors       bool
+	kickParticipantsAndVisitors     bool
 	grantVoice                      bool
 	revokeVoice                     bool
 }
@@ -50,7 +50,7 @@ func newRolePrivileges(
 	inviteOtherUsers,
 	sendMessagesToAll,
 	modifySubject,
-	kickParticipantsAndVitors,
+	kickParticipantsAndVisitors,
 	grantVoice,
 	revokeVoice bool) rolePrivileges {
 	x := rolePrivileges{
@@ -62,7 +62,7 @@ func newRolePrivileges(
 		changeRoomNickname:              changeRoomNickname,
 		sendPrivateMessages:             sendPrivateMessages,
 		inviteOtherUsers:                inviteOtherUsers,
-		kickParticipantsAndVitors:       kickParticipantsAndVitors,
+		kickParticipantsAndVisitors:     kickParticipantsAndVisitors,
 		modifySubject:                   modifySubject,
 		sendMessagesToAll:               sendMessagesToAll,
 		grantVoice:                      grantVoice,
@@ -106,8 +106,8 @@ func (x roleType) InviteOtherUsers() bool {
 	return x.privileges().inviteOtherUsers
 }
 
-func (x roleType) KickParticipantsAndVitors() bool {
-	return x.privileges().kickParticipantsAndVitors
+func (x roleType) KickParticipantsAndVisitors() bool {
+	return x.privileges().kickParticipantsAndVisitors
 }
 
 func (x roleType) ModifySubject() bool {
