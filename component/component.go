@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/ortuman/jackal/component/httpupload"
+	"github.com/ortuman/jackal/module"
+
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
@@ -89,11 +92,10 @@ func GetAll() []Component {
 
 func loadComponents(cfg *Config) []Component {
 	var ret []Component
-	/*
-		discoInfo := module.Modules().DiscoInfo
-		if cfg.HttpUpload != nil {
-			ret = append(ret, httpupload.New(cfg.HttpUpload, discoInfo, shutdownCh))
-		}
-	*/
+	discoInfo := module.Modules().DiscoInfo
+
+	if cfg.HttpUpload != nil {
+		ret = append(ret, httpupload.New(cfg.HttpUpload, discoInfo, shutdownCh))
+	}
 	return ret
 }
