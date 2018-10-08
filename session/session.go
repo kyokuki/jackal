@@ -15,7 +15,7 @@ import (
 	"sync/atomic"
 
 	"github.com/ortuman/jackal/errors"
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/xmpp"
@@ -340,7 +340,7 @@ func (s *Session) validateStreamElement(elem xmpp.XElement) *Error {
 		}
 	}
 	to := elem.To()
-	if len(to) > 0 && !host.IsLocalHost(to) {
+	if len(to) > 0 && !hostmanager.IsLocalHost(to) {
 		return &Error{UnderlyingErr: streamerror.ErrHostUnknown}
 	}
 	if elem.Version() != "1.0" {

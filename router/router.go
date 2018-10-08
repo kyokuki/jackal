@@ -9,7 +9,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
@@ -243,7 +243,7 @@ func (r *router) route(element xmpp.Stanza, ignoreBlocking bool) error {
 			return ErrBlockedJID
 		}
 	}
-	if !host.IsLocalHost(toJID.Domain()) {
+	if !hostmanager.IsLocalHost(toJID.Domain()) {
 		return r.remoteRoute(element)
 	}
 	rcps := r.userStreams(toJID.Node())

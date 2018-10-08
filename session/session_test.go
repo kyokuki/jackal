@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/errors"
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
 	"github.com/ortuman/jackal/xmpp"
@@ -204,9 +204,9 @@ func TestSession_IsValidFrom(t *testing.T) {
 }
 
 func TestSession_ValidateStream(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
 	defer func() {
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	j, _ := jid.NewWithString("jackal.im", true) // server domain

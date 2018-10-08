@@ -26,7 +26,7 @@ type Config struct {
 }
 
 type configProxy struct {
-	Host        string `yaml:"host"`
+	Host        string `yaml:"hostmanager"`
 	BaseURL     string `yaml:"base_url"`
 	Port        int    `yaml:"port"`
 	UploadPath  string `yaml:"upload_path"`
@@ -42,7 +42,7 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	// mandatory fields
 	if len(p.Host) == 0 {
-		return errors.New("httpupload.Config: host value must be set")
+		return errors.New("httpupload.Config: hostmanager value must be set")
 	}
 	if len(p.BaseURL) == 0 {
 		return errors.New("httpupload.Config: base_url must be set")

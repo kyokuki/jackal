@@ -46,7 +46,7 @@ func Initialize(cfg *Config) {
 	for _, c := range cs {
 		host := c.Host()
 		if _, ok := comps[host]; ok {
-			logger.Fatalf("%v", fmt.Errorf("component host name conflict: %s", host))
+			logger.Fatalf("%v", fmt.Errorf("component hostmanager name conflict: %s", host))
 		}
 		comps[host] = c
 	}
@@ -66,7 +66,7 @@ func Shutdown() {
 	initialized = false
 }
 
-// Get returns a specific component associated to host name.
+// Get returns a specific component associated to hostmanager name.
 func Get(host string) Component {
 	instMu.Lock()
 	defer instMu.Unlock()

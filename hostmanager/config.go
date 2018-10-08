@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package host
+package hostmanager
 
 import (
 	"crypto/tls"
@@ -11,13 +11,13 @@ import (
 	"github.com/ortuman/jackal/util"
 )
 
-// TLSConfig represents a host TLS configuration.
+// TLSConfig represents a hostmanager TLS configuration.
 type TLSConfig struct {
 	CertFile    string `yaml:"cert_path"`
 	PrivKeyFile string `yaml:"privkey_path"`
 }
 
-// Config represents a host configuration.
+// Config represents a hostmanager configuration.
 type Config struct {
 	Name        string
 	Certificate tls.Certificate

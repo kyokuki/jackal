@@ -56,7 +56,7 @@ modules:
 
 components:
 #  http_upload:
-#    host: upload.jackal.im
+#    hostmanager: upload.jackal.im
 #    base_url: https://jackal.im:4430/upload
 #    port: 4430
 #    upload_path: /var/lib/jackal/httpupload

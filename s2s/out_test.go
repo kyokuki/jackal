@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/module/offline"
 	"github.com/ortuman/jackal/module/xep0077"
@@ -59,8 +59,8 @@ func TestOutStream_BadConnect(t *testing.T) {
 }
 
 func TestOutStream_Features(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer host.Shutdown()
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
+	defer hostmanager.Shutdown()
 
 	_, conn := tUtilOutStreamInit(t)
 	tUtilOutStreamOpen(conn)
@@ -97,8 +97,8 @@ func TestOutStream_Features(t *testing.T) {
 }
 
 func TestOutStream_DBVerify(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer host.Shutdown()
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
+	defer hostmanager.Shutdown()
 
 	cfg, conn := tUtilOutStreamDefaultConfig()
 	dbVerify := xmpp.NewElementName("db:verify")
@@ -149,8 +149,8 @@ func TestOutStream_DBVerify(t *testing.T) {
 }
 
 func TestOutStream_StartTLS(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer host.Shutdown()
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
+	defer hostmanager.Shutdown()
 
 	// unsupported stanza...
 	_, conn := tUtilOutStreamInit(t)
@@ -185,8 +185,8 @@ func TestOutStream_StartTLS(t *testing.T) {
 }
 
 func TestOutStream_Authenticate(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer host.Shutdown()
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
+	defer hostmanager.Shutdown()
 
 	// unsupported stanza...
 	stm, conn := tUtilOutStreamInit(t)
@@ -253,8 +253,8 @@ func TestOutStream_Authenticate(t *testing.T) {
 }
 
 func TestOutStream_Dialback(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer host.Shutdown()
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
+	defer hostmanager.Shutdown()
 
 	// unsupported stanza...
 	stm, conn := tUtilOutStreamInit(t)

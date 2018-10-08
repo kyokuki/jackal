@@ -8,7 +8,7 @@ package xep0030
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
@@ -49,13 +49,13 @@ func TestXEP0030_Matching(t *testing.T) {
 }
 
 func TestXEP0030_SendFeatures(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	router.Initialize(&router.Config{})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	srvJid, _ := jid.New("", "jackal.im", "", true)
@@ -105,13 +105,13 @@ func TestXEP0030_SendFeatures(t *testing.T) {
 }
 
 func TestXEP0030_SendItems(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	router.Initialize(&router.Config{})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -153,13 +153,13 @@ func (tp *testDiscoInfoProvider) Form(toJID, fromJID *jid.JID, node string) (*xe
 }
 
 func TestXEP0030_Provider(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	router.Initialize(&router.Config{})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	compJID, _ := jid.New("", "test.jackal.im", "", true)

@@ -14,7 +14,7 @@ import (
 	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/errors"
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
@@ -414,7 +414,7 @@ func (s *inStream) proceedStartTLS(elem xmpp.XElement) {
 
 	s.writeElement(xmpp.NewElementNamespace("proceed", tlsNamespace))
 
-	s.cfg.transport.StartTLS(&tls.Config{Certificates: host.Certificates()}, false)
+	s.cfg.transport.StartTLS(&tls.Config{Certificates: hostmanager.Certificates()}, false)
 
 	logger.Infof("secured stream... id: %s", s.id)
 	s.restartSession()
@@ -609,7 +609,7 @@ func (s *inStream) processStanza(elem xmpp.Stanza) {
 func (s *inStream) processIQ(iq *xmpp.IQ) {
 	toJID := iq.ToJID()
 
-	replyOnBehalf := !toJID.IsFullWithUser() && host.IsLocalHost(toJID.Domain())
+	replyOnBehalf := !toJID.IsFullWithUser() && hostmanager.IsLocalHost(toJID.Domain())
 	if !replyOnBehalf {
 		switch router.Route(iq) {
 		case router.ErrResourceNotFound:
@@ -799,7 +799,7 @@ func (s *inStream) disconnectClosingSession(closeSession, unbind bool) {
 }
 
 func (s *inStream) isBlockedJID(j *jid.JID) bool {
-	if j.IsServer() && host.IsLocalHost(j.Domain()) {
+	if j.IsServer() && hostmanager.IsLocalHost(j.Domain()) {
 		return false
 	}
 	return router.IsBlockedJID(j, s.Username())

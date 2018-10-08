@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/router"
@@ -254,7 +254,7 @@ func (r *Roster) removeItem(ri *rostermodel.Item, stm stream.C2S) error {
 			return err
 		}
 	}
-	if host.IsLocalHost(contactJID.Domain()) {
+	if hostmanager.IsLocalHost(contactJID.Domain()) {
 		cntRi, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.String())
 		if err != nil {
 			return err
@@ -316,7 +316,7 @@ func (r *Roster) processSubscribe(presence *xmpp.Presence) error {
 
 	logger.Infof("processing 'subscribe' - contact: %s (%s)", contactJID, userJID)
 
-	if host.IsLocalHost(userJID.Domain()) {
+	if hostmanager.IsLocalHost(userJID.Domain()) {
 		usrRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.String())
 		if err != nil {
 			return err
@@ -349,7 +349,7 @@ func (r *Roster) processSubscribe(presence *xmpp.Presence) error {
 	p := xmpp.NewPresence(userJID, contactJID, xmpp.SubscribeType)
 	p.AppendElements(presence.Elements().All())
 
-	if host.IsLocalHost(contactJID.Domain()) {
+	if hostmanager.IsLocalHost(contactJID.Domain()) {
 		// archive roster approval notification
 		if err := r.insertOrUpdateNotification(contactJID.Node(), userJID, p); err != nil {
 			return err
@@ -365,7 +365,7 @@ func (r *Roster) processSubscribed(presence *xmpp.Presence) error {
 
 	logger.Infof("processing 'subscribed' - user: %s (%s)", userJID, contactJID)
 
-	if host.IsLocalHost(contactJID.Domain()) {
+	if hostmanager.IsLocalHost(contactJID.Domain()) {
 		_, err := r.deleteNotification(contactJID.Node(), userJID)
 		if err != nil {
 			return err
@@ -398,7 +398,7 @@ func (r *Roster) processSubscribed(presence *xmpp.Presence) error {
 	p := xmpp.NewPresence(contactJID, userJID, xmpp.SubscribedType)
 	p.AppendElements(presence.Elements().All())
 
-	if host.IsLocalHost(userJID.Domain()) {
+	if hostmanager.IsLocalHost(userJID.Domain()) {
 		usrRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.String())
 		if err != nil {
 			return err
@@ -430,7 +430,7 @@ func (r *Roster) processUnsubscribe(presence *xmpp.Presence) error {
 	logger.Infof("processing 'unsubscribe' - contact: %s (%s)", contactJID, userJID)
 
 	var usrSub string
-	if host.IsLocalHost(userJID.Domain()) {
+	if hostmanager.IsLocalHost(userJID.Domain()) {
 		usrRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.String())
 		if err != nil {
 			return err
@@ -453,7 +453,7 @@ func (r *Roster) processUnsubscribe(presence *xmpp.Presence) error {
 	p := xmpp.NewPresence(userJID, contactJID, xmpp.UnsubscribeType)
 	p.AppendElements(presence.Elements().All())
 
-	if host.IsLocalHost(contactJID.Domain()) {
+	if hostmanager.IsLocalHost(contactJID.Domain()) {
 		cntRi, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.String())
 		if err != nil {
 			return err
@@ -485,7 +485,7 @@ func (r *Roster) processUnsubscribed(presence *xmpp.Presence) error {
 	logger.Infof("processing 'unsubscribed' - user: %s (%s)", userJID, contactJID)
 
 	var cntSub string
-	if host.IsLocalHost(contactJID.Domain()) {
+	if hostmanager.IsLocalHost(contactJID.Domain()) {
 		deleted, err := r.deleteNotification(contactJID.Node(), userJID)
 		if err != nil {
 			return err
@@ -517,7 +517,7 @@ routePresence:
 	p := xmpp.NewPresence(contactJID, userJID, xmpp.UnsubscribedType)
 	p.AppendElements(presence.Elements().All())
 
-	if host.IsLocalHost(userJID.Domain()) {
+	if hostmanager.IsLocalHost(userJID.Domain()) {
 		usrRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.String())
 		if err != nil {
 			return err
@@ -577,7 +577,7 @@ func (r *Roster) processAvailablePresence(presence *xmpp.Presence) error {
 	userJID := fromJID.ToBareJID()
 	contactJID := presence.ToJID().ToBareJID()
 
-	replyOnBehalf := host.IsLocalHost(userJID.Domain()) && userJID.Matches(contactJID, jid.MatchesBare)
+	replyOnBehalf := hostmanager.IsLocalHost(userJID.Domain()) && userJID.Matches(contactJID, jid.MatchesBare)
 
 	// keep track of available presences
 	if presence.IsAvailable() {
@@ -621,7 +621,7 @@ func (r *Roster) deliverRosterPresences(userJID *jid.JID) error {
 		switch item.Subscription {
 		case rostermodel.SubscriptionTo, rostermodel.SubscriptionBoth:
 			contactJID := item.ContactJID()
-			if !host.IsLocalHost(contactJID.Domain()) {
+			if !hostmanager.IsLocalHost(contactJID.Domain()) {
 				router.Route(xmpp.NewPresence(userJID, contactJID, xmpp.ProbeType))
 				continue
 			}

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/module/roster"
@@ -89,13 +89,13 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 }
 
 func TestXEP191_BlockAndUnblock(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer func() {
 		storage.Shutdown()
 		router.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 	r := roster.New(&roster.Config{}, nil)
 	x := New(nil, r, nil)

@@ -8,7 +8,7 @@ package xep0012
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/router"
@@ -70,13 +70,13 @@ func TestXEP0012_GetServerLastActivity(t *testing.T) {
 }
 
 func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	router.Initialize(&router.Config{})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)

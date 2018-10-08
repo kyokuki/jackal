@@ -15,9 +15,11 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/Hooks-Alerts/hd.api/log"
+
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/component"
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
@@ -81,13 +83,22 @@ func main() {
 		fmt.Fprintf(os.Stderr, "jackal: %v\n", err)
 		return
 	}
+	// initialize debug server...
+	if cfg.Debug.Port > 0 {
+		go initDebugServer(cfg.Debug.Port)
+	}
+
 	// initialize subsystems... (order matters)
-	initLogger(&cfg.Logger)
+	if err := initLogger(&cfg.Logger); err != nil {
+		log.Fatalf("%v", err)
+	}
+	defer logger.Close()
 
 	storage.Initialize(&cfg.Storage)
 
-	host.Initialize(cfg.Hosts)
-
+	if err := initHostManager(cfg.Hosts); err != nil {
+		logger.Fatal(err)
+	}
 	router.Initialize(&router.Config{GetS2SOut: s2s.GetS2SOut})
 
 	// initialize modules & components...
@@ -104,11 +115,6 @@ func main() {
 	}
 	logger.Infof("")
 	logger.Infof("jackal %v\n", version.ApplicationVersion)
-
-	// initialize debug server...
-	if cfg.Debug.Port > 0 {
-		go initDebugServer(cfg.Debug.Port)
-	}
 
 	// start serving s2s...
 	s2s.Initialize(cfg.S2S)
@@ -128,24 +134,33 @@ func initDebugServer(port int) {
 	debugSrv.Serve(ln)
 }
 
-func initLogger(cfg *LoggerConfig) error {
+func initLogger(config *LoggerConfig) error {
 	writers := []io.Writer{os.Stdout}
-	if len(cfg.LogPath) > 0 {
+	if len(config.LogPath) > 0 {
 		// create logFile intermediate directories.
-		if err := os.MkdirAll(filepath.Dir(cfg.LogPath), os.ModePerm); err != nil {
+		if err := os.MkdirAll(filepath.Dir(config.LogPath), os.ModePerm); err != nil {
 			return err
 		}
-		f, err := os.OpenFile(cfg.LogPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
+		f, err := os.OpenFile(config.LogPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
 		if err != nil {
 			return err
 		}
 		writers = append(writers, f)
 	}
-	l, err := logger.New(cfg.Level, writers...)
+	l, err := logger.New(config.Level, writers...)
 	if err != nil {
 		return err
 	}
 	logger.Set(l)
+	return nil
+}
+
+func initHostManager(configs []hostmanager.Config) error {
+	hm, err := hostmanager.New(configs)
+	if err != nil {
+		return err
+	}
+	hostmanager.Set(hm)
 	return nil
 }
 

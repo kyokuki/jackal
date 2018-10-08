@@ -18,8 +18,8 @@ func TestStreamError(t *testing.T) {
 	require.Equal(t, "invalid-namespace", ErrInvalidNamespace.Error())
 	require.Equal(t, "invalid-namespace", ErrInvalidNamespace.Element().Elements().All()[0].Name())
 
-	require.Equal(t, "host-unknown", ErrHostUnknown.Error())
-	require.Equal(t, "host-unknown", ErrHostUnknown.Element().Elements().All()[0].Name())
+	require.Equal(t, "hostmanager-unknown", ErrHostUnknown.Error())
+	require.Equal(t, "hostmanager-unknown", ErrHostUnknown.Element().Elements().All()[0].Name())
 
 	require.Equal(t, "invalid-from", ErrInvalidFrom.Error())
 	require.Equal(t, "invalid-from", ErrInvalidFrom.Element().Elements().All()[0].Name())

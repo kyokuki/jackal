@@ -25,7 +25,7 @@ func TestStorageConfig(t *testing.T) {
 	mySQLCfg := `
   type: mysql
   mysql:
-    host: 127.0.0.1
+    hostmanager: 127.0.0.1
     user: jackal
     password: password
     database: jackaldb
@@ -43,7 +43,7 @@ func TestStorageConfig(t *testing.T) {
 	mySQLCfg2 := `
   type: mysql
   mysql:
-    host: 127.0.0.1
+    hostmanager: 127.0.0.1
     user: jackal
     password: password
     database: jackaldb

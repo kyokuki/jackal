@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/module/offline"
 	"github.com/ortuman/jackal/module/xep0077"
@@ -46,8 +46,8 @@ func TestStream_Disconnect(t *testing.T) {
 }
 
 func TestStream_Features(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer host.Shutdown()
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
+	defer hostmanager.Shutdown()
 
 	// unsecured features
 	stm, conn := tUtilInStreamInit(t, false)
@@ -90,8 +90,8 @@ func TestStream_Features(t *testing.T) {
 }
 
 func TestStream_TLS(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer host.Shutdown()
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
+	defer hostmanager.Shutdown()
 
 	stm, conn := tUtilInStreamInit(t, false)
 	tUtilInStreamOpen(conn)
@@ -127,8 +127,8 @@ func TestStream_TLS(t *testing.T) {
 }
 
 func TestStream_Authenticate(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer host.Shutdown()
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
+	defer hostmanager.Shutdown()
 
 	stm, conn := tUtilInStreamInit(t, false)
 	tUtilInStreamOpen(conn)
@@ -178,8 +178,8 @@ func TestStream_Authenticate(t *testing.T) {
 }
 
 func TestStream_DialbackVerify(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer host.Shutdown()
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
+	defer hostmanager.Shutdown()
 
 	stm, conn := tUtilInStreamInit(t, false)
 	tUtilInStreamOpen(conn)
@@ -188,7 +188,7 @@ func TestStream_DialbackVerify(t *testing.T) {
 	atomic.StoreUint32(&stm.secured, 1)
 	atomic.StoreUint32(&stm.authenticated, 1)
 
-	// invalid host
+	// invalid hostmanager
 	conn.inboundWriteString(`<db:verify id="abcde" from="localhost" to="foo.org">abcd</db:verify>`)
 	elem := conn.outboundRead()
 	require.Equal(t, "db:verify", elem.Name())
@@ -211,8 +211,8 @@ func TestStream_DialbackVerify(t *testing.T) {
 }
 
 func TestStream_DialbackAuthorize(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer host.Shutdown()
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
+	defer hostmanager.Shutdown()
 
 	stm, conn := tUtilInStreamInit(t, false)
 	tUtilInStreamOpen(conn)
@@ -334,13 +334,13 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 }
 
 func TestStream_SendElement(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 	fromJID, _ := jid.New("ortuman", "localhost", "garden", true)
 	toJID, _ := jid.New("ortuman", "jackal.im", "garden", true)

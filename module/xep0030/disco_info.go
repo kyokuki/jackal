@@ -8,7 +8,7 @@ package xep0030
 import (
 	"sync"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -123,7 +123,7 @@ func (di *DiscoInfo) processIQ(iq *xmpp.IQ, stm stream.C2S) {
 	toJID := iq.ToJID()
 
 	var prov InfoProvider
-	if host.IsLocalHost(toJID.Domain()) {
+	if hostmanager.IsLocalHost(toJID.Domain()) {
 		prov = di.srvProvider
 	} else {
 		prov = di.providers[toJID.Domain()]

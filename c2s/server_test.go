@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/transport"
@@ -22,7 +22,7 @@ import (
 )
 
 func TestC2SSocketServer(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "localhost"}})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	router.Initialize(&router.Config{})
 
@@ -66,7 +66,7 @@ func TestC2SSocketServer(t *testing.T) {
 
 	router.Shutdown()
 	storage.Shutdown()
-	host.Shutdown()
+	hostmanager.Shutdown()
 }
 
 func TestC2SWebSocketServer(t *testing.T) {
@@ -75,7 +75,7 @@ func TestC2SWebSocketServer(t *testing.T) {
 	cer, err := util.LoadCertificate(privKeyFile, certFile, "localhost")
 	require.Nil(t, err)
 
-	host.Initialize([]host.Config{{Name: "localhost", Certificate: cer}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "localhost", Certificate: cer}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 
@@ -122,5 +122,5 @@ func TestC2SWebSocketServer(t *testing.T) {
 
 	router.Shutdown()
 	storage.Shutdown()
-	host.Shutdown()
+	hostmanager.Shutdown()
 }

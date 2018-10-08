@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
@@ -20,13 +20,13 @@ import (
 )
 
 func TestOffline_ArchiveMessage(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer func() {
 		storage.Shutdown()
 		router.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("juliet", "jackal.im", "garden", true)

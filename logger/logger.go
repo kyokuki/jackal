@@ -19,6 +19,12 @@ import (
 	"unsafe"
 )
 
+const logChanBufferSize = 512
+
+const projectFolder = "jackal"
+
+var exitHandler = func() { os.Exit(-1) }
+
 // LogLevel represents logger level type.
 type LogLevel int
 
@@ -101,11 +107,7 @@ func Error(err error) { get().Error(err) }
 // Application should terminate after logging.
 func Fatal(err error) { get().Fatal(err) }
 
-const logChanBufferSize = 512
-
-const projectFolder = "jackal"
-
-var exitHandler = func() { os.Exit(-1) }
+func Close() error { return get().Close() }
 
 type logger struct {
 	level   LogLevel

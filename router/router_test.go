@@ -8,7 +8,7 @@ package router
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memstorage"
@@ -28,11 +28,11 @@ func (f *fakeS2SOut) SendElement(elem xmpp.XElement) { f.elems = append(f.elems,
 func (f *fakeS2SOut) Disconnect(err error)           {}
 
 func TestC2SManager(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
 	Initialize(&Config{})
 	defer func() {
 		Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	j1, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
@@ -66,13 +66,13 @@ func TestC2SManager(t *testing.T) {
 
 func TestC2SManager_Routing(t *testing.T) {
 	outS2S := fakeS2SOut{}
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	Initialize(&Config{GetS2SOut: func(_, _ string) (stream.S2SOut, error) { return &outS2S, nil }})
 	defer func() {
 		Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	j1, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
@@ -154,13 +154,13 @@ func TestC2SManager_Routing(t *testing.T) {
 }
 
 func TestC2SManager_BlockedJID(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	Initialize(&Config{})
 	defer func() {
 		Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	j1, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)

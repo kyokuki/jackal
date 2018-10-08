@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/errors"
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
@@ -208,7 +208,7 @@ func (s *inStream) proceedStartTLS(elem xmpp.XElement) {
 	s.cfg.transport.StartTLS(&tls.Config{
 		ServerName:   s.localDomain,
 		ClientAuth:   tls.VerifyClientCertIfGiven,
-		Certificates: host.Certificates(),
+		Certificates: hostmanager.Certificates(),
 	}, false)
 	atomic.StoreUint32(&s.secured, 1)
 
@@ -260,7 +260,7 @@ func (s *inStream) failAuthentication(reason, text string) {
 }
 
 func (s *inStream) authorizeDialbackKey(elem xmpp.XElement) {
-	if !host.IsLocalHost(elem.To()) {
+	if !hostmanager.IsLocalHost(elem.To()) {
 		s.writeStanzaErrorResponse(elem, xmpp.ErrItemNotFound)
 		return
 	}
@@ -307,7 +307,7 @@ func (s *inStream) authorizeDialbackKey(elem xmpp.XElement) {
 }
 
 func (s *inStream) verifyDialbackKey(elem xmpp.XElement) {
-	if !host.IsLocalHost(elem.To()) {
+	if !hostmanager.IsLocalHost(elem.To()) {
 		s.writeStanzaErrorResponse(elem, xmpp.ErrItemNotFound)
 		return
 	}

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/transport"
 )
 
@@ -47,7 +47,7 @@ func (d *dialer) dial(localDomain, remoteDomain string) (*streamConfig, error) {
 	}
 	tlsConfig := &tls.Config{
 		ServerName:   remoteDomain,
-		Certificates: host.Certificates(),
+		Certificates: hostmanager.Certificates(),
 	}
 	tr := transport.NewSocketTransport(conn, d.cfg.Transport.KeepAlive)
 	return &streamConfig{

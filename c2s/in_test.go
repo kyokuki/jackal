@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
@@ -24,13 +24,13 @@ import (
 )
 
 func TestStream_ConnectTimeout(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "localhost"}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	stm, _ := tUtilStreamInit()
@@ -39,13 +39,13 @@ func TestStream_ConnectTimeout(t *testing.T) {
 }
 
 func TestStream_Disconnect(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "localhost"}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	stm, conn := tUtilStreamInit()
@@ -56,13 +56,13 @@ func TestStream_Disconnect(t *testing.T) {
 }
 
 func TestStream_Features(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "localhost"}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	// unsecured features
@@ -93,13 +93,13 @@ func TestStream_Features(t *testing.T) {
 }
 
 func TestStream_TLS(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "localhost"}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
@@ -121,13 +121,13 @@ func TestStream_TLS(t *testing.T) {
 }
 
 func TestStream_FailAuthenticate(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "localhost"}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
@@ -167,13 +167,13 @@ func TestStream_FailAuthenticate(t *testing.T) {
 }
 
 func TestStream_Compression(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "localhost"}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
@@ -216,13 +216,13 @@ func TestStream_Compression(t *testing.T) {
 }
 
 func TestStream_StartSession(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "localhost"}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
@@ -244,7 +244,7 @@ func TestStream_StartSession(t *testing.T) {
 }
 
 func TestStream_SendIQ(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "localhost"}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	tUtilInitModules()
@@ -252,7 +252,7 @@ func TestStream_SendIQ(t *testing.T) {
 		module.Shutdown()
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
@@ -288,13 +288,13 @@ func TestStream_SendIQ(t *testing.T) {
 }
 
 func TestStream_SendPresence(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "localhost"}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
@@ -338,13 +338,13 @@ func TestStream_SendPresence(t *testing.T) {
 }
 
 func TestStream_SendMessage(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "localhost"}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
@@ -395,13 +395,13 @@ func TestStream_SendMessage(t *testing.T) {
 }
 
 func TestStream_SendToBlockedJID(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "localhost"}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})

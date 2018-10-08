@@ -10,14 +10,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/stretchr/testify/require"
 )
 
 func TestS2SSocketServer(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "localhost"}})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	router.Initialize(&router.Config{})
 
@@ -58,5 +58,5 @@ func TestS2SSocketServer(t *testing.T) {
 
 	router.Shutdown()
 	storage.Shutdown()
-	host.Shutdown()
+	hostmanager.Shutdown()
 }

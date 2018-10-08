@@ -21,8 +21,8 @@ var (
 	// ErrInvalidNamespace represents 'invalid-namespace' stream error.
 	ErrInvalidNamespace = newStreamError("invalid-namespace")
 
-	// ErrHostUnknown represents 'host-unknown' stream error.
-	ErrHostUnknown = newStreamError("host-unknown")
+	// ErrHostUnknown represents 'hostmanager-unknown' stream error.
+	ErrHostUnknown = newStreamError("hostmanager-unknown")
 
 	// ErrInvalidFrom represents 'invalid-from' stream error.
 	ErrInvalidFrom = newStreamError("invalid-from")

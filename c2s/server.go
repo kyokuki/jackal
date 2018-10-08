@@ -15,7 +15,7 @@ import (
 	"sync/atomic"
 
 	"github.com/gorilla/websocket"
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/transport"
 )
@@ -72,7 +72,7 @@ func (s *server) listenSocketConn(address string) error {
 func (s *server) listenWebSocketConn(address string) error {
 	http.HandleFunc(s.cfg.Transport.URLPath, s.websocketUpgrade)
 
-	s.wsSrv = &http.Server{TLSConfig: &tls.Config{Certificates: host.Certificates()}}
+	s.wsSrv = &http.Server{TLSConfig: &tls.Config{Certificates: hostmanager.Certificates()}}
 	s.wsUpgrader = &websocket.Upgrader{
 		Subprotocols: []string{"xmpp"},
 		CheckOrigin:  func(r *http.Request) bool { return r.Header.Get("Sec-WebSocket-Protocol") == "xmpp" },

@@ -32,7 +32,7 @@ type rowsScanner interface {
 
 // Config represents SQL storage configuration.
 type Config struct {
-	Host     string `yaml:"host"`
+	Host     string `yaml:"hostmanager"`
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
 	Database string `yaml:"database"`

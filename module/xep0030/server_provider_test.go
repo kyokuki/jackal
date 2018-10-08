@@ -9,7 +9,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/hostmanager"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
@@ -21,13 +21,13 @@ import (
 )
 
 func TestServerProvider_Features(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	router.Initialize(&router.Config{})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	var sp serverProvider
@@ -82,13 +82,13 @@ func TestServerProvider_Identities(t *testing.T) {
 }
 
 func TestServerProvider_Items(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	hostmanager.Initialize([]hostmanager.Config{{Name: "jackal.im"}})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	router.Initialize(&router.Config{})
 	defer func() {
 		router.Shutdown()
 		storage.Shutdown()
-		host.Shutdown()
+		hostmanager.Shutdown()
 	}()
 
 	var sp serverProvider
