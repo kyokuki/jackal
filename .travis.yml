@@ -25,7 +25,7 @@ script:
   - go test -race -coverprofile=c2s.coverage.txt -covermode=atomic ./c2s
   - go test -race -coverprofile=errors.coverage.txt -covermode=atomic ./errors
   - go test -race -coverprofile=host.coverage.txt -covermode=atomic ./host
-  - go test -race -coverprofile=log.coverage.txt -covermode=atomic ./log
+  - go test -race -coverprofile=logger.coverage.txt -covermode=atomic ./logger
   - go test -race -coverprofile=model.coverage.txt -covermode=atomic ./model
   - go test -race -coverprofile=rostermodel.coverage.txt -covermode=atomic ./model/rostermodel
   - go test -race -coverprofile=module.coverage.txt -covermode=atomic ./module

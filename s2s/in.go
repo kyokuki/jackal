@@ -13,7 +13,7 @@ import (
 
 	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/host"
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/session"
@@ -212,7 +212,7 @@ func (s *inStream) proceedStartTLS(elem xmpp.XElement) {
 	}, false)
 	atomic.StoreUint32(&s.secured, 1)
 
-	log.Infof("secured stream... id: %s", s.id)
+	logger.Infof("secured stream... id: %s", s.id)
 	s.restartSession()
 }
 
@@ -239,7 +239,7 @@ func (s *inStream) startAuthentication(elem xmpp.XElement) {
 }
 
 func (s *inStream) finishAuthentication() {
-	log.Infof("s2s in stream authenticated")
+	logger.Infof("s2s in stream authenticated")
 	atomic.StoreUint32(&s.authenticated, 1)
 
 	success := xmpp.NewElementNamespace("success", saslNamespace)
@@ -248,7 +248,7 @@ func (s *inStream) finishAuthentication() {
 }
 
 func (s *inStream) failAuthentication(reason, text string) {
-	log.Infof("failed s2s in stream authentication: %s (text: %s)", reason, text)
+	logger.Infof("failed s2s in stream authentication: %s (text: %s)", reason, text)
 	failure := xmpp.NewElementNamespace("failure", saslNamespace)
 	failure.AppendElement(xmpp.NewElementName(reason))
 	if len(text) > 0 {
@@ -264,11 +264,11 @@ func (s *inStream) authorizeDialbackKey(elem xmpp.XElement) {
 		s.writeStanzaErrorResponse(elem, xmpp.ErrItemNotFound)
 		return
 	}
-	log.Infof("authorizing dialback key: %s...", elem.Text())
+	logger.Infof("authorizing dialback key: %s...", elem.Text())
 
 	outCfg, err := s.cfg.dialer.dial(elem.To(), elem.From())
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		s.writeStanzaErrorResponse(elem, xmpp.ErrRemoteServerNotFound)
 		return
 	}
@@ -318,10 +318,10 @@ func (s *inStream) verifyDialbackKey(elem xmpp.XElement) {
 
 	expectedKey := s.cfg.keyGen.generate(elem.From(), elem.To(), elem.ID())
 	if expectedKey == elem.Text() {
-		log.Infof("dialback key successfully verified... (key: %s)", elem.Text())
+		logger.Infof("dialback key successfully verified... (key: %s)", elem.Text())
 		dbVerify.SetType("valid")
 	} else {
-		log.Infof("failed dialback key verification... (expected: %s, got: %s)", expectedKey, elem.Text())
+		logger.Infof("failed dialback key verification... (expected: %s, got: %s)", expectedKey, elem.Text())
 		dbVerify.SetType("invalid")
 	}
 	s.writeElement(dbVerify)
@@ -358,7 +358,7 @@ func (s *inStream) handleSessionError(sErr *session.Error) {
 	case *xmpp.StanzaError:
 		s.writeStanzaErrorResponse(sErr.Element, err)
 	default:
-		log.Error(err)
+		logger.Error(err)
 		s.disconnectWithStreamError(streamerror.ErrUndefinedCondition)
 	}
 }
@@ -374,7 +374,7 @@ func (s *inStream) disconnect(err error) {
 		if stmErr, ok := err.(*streamerror.Error); ok {
 			s.disconnectWithStreamError(stmErr)
 		} else {
-			log.Error(err)
+			logger.Error(err)
 			s.disconnectClosingSession(false)
 		}
 	}

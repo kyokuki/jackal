@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
@@ -77,7 +77,7 @@ func (x *LastActivity) processIQ(iq *xmpp.IQ, stm stream.C2S) {
 	} else if toJID.IsBare() {
 		ok, err := x.isSubscribedTo(toJID, fromJID)
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 			stm.SendElement(iq.InternalServerError())
 			return
 		}
@@ -103,7 +103,7 @@ func (x *LastActivity) sendUserLastActivity(iq *xmpp.IQ, to *jid.JID, stm stream
 	}
 	usr, err := storage.Instance().FetchUser(to.Node())
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
 	}

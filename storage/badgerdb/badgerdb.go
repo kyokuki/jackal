@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/pool"
 )
@@ -45,14 +45,14 @@ func New(cfg *Config) *Storage {
 		doneCh: make(chan chan bool),
 	}
 	if err := os.MkdirAll(filepath.Dir(cfg.DataDir), os.ModePerm); err != nil {
-		log.Fatalf("%v", err)
+		logger.Fatalf("%v", err)
 	}
 	opts := badger.DefaultOptions
 	opts.Dir = cfg.DataDir
 	opts.ValueDir = cfg.DataDir
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatalf("%v", err)
+		logger.Fatalf("%v", err)
 	}
 	b.db = db
 	go b.loop()

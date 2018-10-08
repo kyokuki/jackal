@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/host"
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
@@ -133,7 +133,7 @@ func instance() *router {
 	instMu.RLock()
 	defer instMu.RUnlock()
 	if inst == nil {
-		log.Fatalf("router manager not initialized")
+		logger.Fatalf("router manager not initialized")
 	}
 	return inst
 }
@@ -150,7 +150,7 @@ func (r *router) bind(stm stream.C2S) {
 	} else {
 		r.localStreams[stm.Username()] = []stream.C2S{stm}
 	}
-	log.Infof("binded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
+	logger.Infof("binded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 	return
 }
 
@@ -175,7 +175,7 @@ func (r *router) unbind(stm stream.C2S) {
 			delete(r.localStreams, stm.Username())
 		}
 	}
-	log.Infof("unbinded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
+	logger.Infof("unbinded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 }
 
 func (r *router) userStreams(username string) []stream.C2S {
@@ -210,7 +210,7 @@ func (r *router) reloadBlockList(username string) {
 	defer r.blockListsMu.Unlock()
 
 	delete(r.blockLists, username)
-	log.Infof("block list reloaded... (username: %s)", username)
+	logger.Infof("block list reloaded... (username: %s)", username)
 }
 
 func (r *router) getBlockList(username string) []*jid.JID {
@@ -222,7 +222,7 @@ func (r *router) getBlockList(username string) []*jid.JID {
 	}
 	blItms, err := storage.Instance().FetchBlockListItems(username)
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		return nil
 	}
 	bl = []*jid.JID{}
@@ -301,7 +301,7 @@ func (r *router) remoteRoute(elem xmpp.Stanza) error {
 
 	out, err := r.cfg.GetS2SOut(localDomain, remoteDomain)
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		return ErrFailedRemoteConnect
 	}
 	out.SendElement(elem)

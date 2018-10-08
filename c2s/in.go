@@ -15,7 +15,7 @@ import (
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/host"
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/session"
@@ -416,7 +416,7 @@ func (s *inStream) proceedStartTLS(elem xmpp.XElement) {
 
 	s.cfg.transport.StartTLS(&tls.Config{Certificates: host.Certificates()}, false)
 
-	log.Infof("secured stream... id: %s", s.id)
+	logger.Infof("secured stream... id: %s", s.id)
 	s.restartSession()
 }
 
@@ -444,7 +444,7 @@ func (s *inStream) compress(elem xmpp.XElement) {
 
 	s.cfg.transport.EnableCompression(s.cfg.compression.Level)
 
-	log.Infof("compressed stream... id: %s", s.id)
+	logger.Infof("compressed stream... id: %s", s.id)
 
 	s.restartSession()
 }
@@ -480,7 +480,7 @@ func (s *inStream) continueAuthentication(elem xmpp.XElement, authr auth.Authent
 	if saslErr, ok := err.(*auth.SASLError); ok {
 		s.failAuthentication(saslErr.Element())
 	} else if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		s.failAuthentication(auth.ErrSASLTemporaryAuthFailure.(*auth.SASLError).Element())
 	}
 	return err
@@ -669,11 +669,11 @@ sendMessage:
 		}
 		fallthrough
 	case router.ErrNotExistingAccount, router.ErrBlockedJID:
-		s.writeElement(message.ServiceUnavailableError())
+		router.Route(message.ServiceUnavailableError())
 	case router.ErrFailedRemoteConnect:
-		s.writeElement(message.RemoteServerNotFoundError())
+		router.Route(message.RemoteServerNotFoundError())
 	default:
-		log.Error(err)
+		logger.Error(err)
 	}
 }
 
@@ -720,7 +720,7 @@ func (s *inStream) handleSessionError(sErr *session.Error) {
 	case *xmpp.StanzaError:
 		s.writeStanzaErrorResponse(sErr.Element, err)
 	default:
-		log.Error(err)
+		logger.Error(err)
 		s.disconnectWithStreamError(streamerror.ErrUndefinedCondition)
 	}
 }
@@ -758,7 +758,7 @@ func (s *inStream) disconnect(err error) {
 		if stmErr, ok := err.(*streamerror.Error); ok {
 			s.disconnectWithStreamError(stmErr)
 		} else {
-			log.Error(err)
+			logger.Error(err)
 			s.disconnectClosingSession(false, true)
 		}
 	}

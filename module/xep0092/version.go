@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/version"
@@ -90,7 +90,7 @@ func (x *Version) sendSoftwareVersion(iq *xmpp.IQ, stm stream.C2S) {
 	userJID := stm.JID()
 	username := userJID.Node()
 	resource := userJID.Resource()
-	log.Infof("retrieving software version: %v (%s/%s)", version.ApplicationVersion, username, resource)
+	logger.Infof("retrieving software version: %v (%s/%s)", version.ApplicationVersion, username, resource)
 
 	result := iq.ResultIQ()
 	query := xmpp.NewElementNamespace("query", versionNamespace)

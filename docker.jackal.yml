@@ -4,7 +4,7 @@ pid_path: /var/run/jackal.pid
 
 logger:
   level: debug
-  log_path: /var/log/jackal/jackal.log
+  log_path: /var/logger/jackal/jackal.logger
 
 storage:
   type: badgerdb

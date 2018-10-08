@@ -16,7 +16,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/host"
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/transport"
 )
 
@@ -36,7 +36,7 @@ func (s *server) start() {
 	port := s.cfg.Transport.Port
 	address := bindAddr + ":" + strconv.Itoa(port)
 
-	log.Infof("%s: listening at %s [transport: %v]", s.cfg.ID, address, s.cfg.Transport.Type)
+	logger.Infof("%s: listening at %s [transport: %v]", s.cfg.ID, address, s.cfg.Transport.Type)
 
 	var err error
 	switch s.cfg.Transport.Type {
@@ -47,7 +47,7 @@ func (s *server) start() {
 		break
 	}
 	if err != nil {
-		log.Fatalf("%v", err)
+		logger.Fatalf("%v", err)
 	}
 }
 
@@ -90,7 +90,7 @@ func (s *server) listenWebSocketConn(address string) error {
 func (s *server) websocketUpgrade(w http.ResponseWriter, r *http.Request) {
 	conn, err := s.wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		return
 	}
 	s.startStream(transport.NewWebSocketTransport(conn, s.cfg.Transport.KeepAlive))

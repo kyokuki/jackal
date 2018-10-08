@@ -12,7 +12,7 @@ import (
 	"github.com/ortuman/jackal/component/httpupload"
 	"github.com/ortuman/jackal/module"
 
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 )
@@ -46,7 +46,7 @@ func Initialize(cfg *Config) {
 	for _, c := range cs {
 		host := c.Host()
 		if _, ok := comps[host]; ok {
-			log.Fatalf("%v", fmt.Errorf("component host name conflict: %s", host))
+			logger.Fatalf("%v", fmt.Errorf("component host name conflict: %s", host))
 		}
 		comps[host] = c
 	}

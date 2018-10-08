@@ -8,7 +8,7 @@ package xep0049
 import (
 	"strings"
 
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
@@ -89,11 +89,11 @@ func (x *Private) getPrivate(iq *xmpp.IQ, q xmpp.XElement, stm stream.C2S) {
 		stm.SendElement(iq.NotAcceptableError())
 		return
 	}
-	log.Infof("retrieving private element. ns: %s... (%s/%s)", privNS, stm.Username(), stm.Resource())
+	logger.Infof("retrieving private element. ns: %s... (%s/%s)", privNS, stm.Username(), stm.Resource())
 
 	privElements, err := storage.Instance().FetchPrivateXML(privNS, stm.Username())
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
 	}
@@ -131,10 +131,10 @@ func (x *Private) setPrivate(iq *xmpp.IQ, q xmpp.XElement, stm stream.C2S) {
 		nsElements[ns] = elems
 	}
 	for ns, elements := range nsElements {
-		log.Infof("saving private element. ns: %s... (%s/%s)", ns, stm.Username(), stm.Resource())
+		logger.Infof("saving private element. ns: %s... (%s/%s)", ns, stm.Username(), stm.Resource())
 
 		if err := storage.Instance().InsertOrUpdatePrivateXML(elements, ns, stm.Username()); err != nil {
-			log.Error(err)
+			logger.Error(err)
 			stm.SendElement(iq.InternalServerError())
 			return
 		}

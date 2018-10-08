@@ -8,7 +8,7 @@ package storage
 import (
 	"sync"
 
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/storage/badgerdb"
@@ -154,7 +154,7 @@ func Instance() Storage {
 	instMu.RLock()
 	defer instMu.RUnlock()
 	if inst == nil {
-		log.Fatalf("storage subsystem not initialized")
+		logger.Fatalf("storage subsystem not initialized")
 	}
 	return inst
 }

@@ -6,7 +6,7 @@
 package xep0054
 
 import (
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
@@ -83,11 +83,11 @@ func (x *VCard) getVCard(vCard xmpp.XElement, iq *xmpp.IQ, stm stream.C2S) {
 	toJID := iq.ToJID()
 	resElem, err := storage.Instance().FetchVCard(toJID.Node())
 	if err != nil {
-		log.Errorf("%v", err)
+		logger.Errorf("%v", err)
 		stm.SendElement(iq.InternalServerError())
 		return
 	}
-	log.Infof("retrieving vcard... (%s/%s)", toJID.Node(), toJID.Resource())
+	logger.Infof("retrieving vcard... (%s/%s)", toJID.Node(), toJID.Resource())
 
 	resultIQ := iq.ResultIQ()
 	if resElem != nil {
@@ -102,11 +102,11 @@ func (x *VCard) getVCard(vCard xmpp.XElement, iq *xmpp.IQ, stm stream.C2S) {
 func (x *VCard) setVCard(vCard xmpp.XElement, iq *xmpp.IQ, stm stream.C2S) {
 	toJID := iq.ToJID()
 	if toJID.IsServer() || (toJID.Node() == stm.Username()) {
-		log.Infof("saving vcard... (%s/%s)", toJID.Node(), toJID.Resource())
+		logger.Infof("saving vcard... (%s/%s)", toJID.Node(), toJID.Resource())
 
 		err := storage.Instance().InsertOrUpdateVCard(vCard, toJID.Node())
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 			stm.SendElement(iq.InternalServerError())
 			return
 

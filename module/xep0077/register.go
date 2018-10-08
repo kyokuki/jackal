@@ -6,7 +6,7 @@
 package xep0077
 
 import (
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/storage"
@@ -139,7 +139,7 @@ func (x *Register) registerNewUser(iq *xmpp.IQ, query xmpp.XElement, stm stream.
 	}
 	exists, err := storage.Instance().UserExists(userEl.Text())
 	if err != nil {
-		log.Errorf("%v", err)
+		logger.Errorf("%v", err)
 		stm.SendElement(iq.InternalServerError())
 		return
 	}
@@ -153,7 +153,7 @@ func (x *Register) registerNewUser(iq *xmpp.IQ, query xmpp.XElement, stm stream.
 		LastPresence: xmpp.NewPresence(stm.JID(), stm.JID(), xmpp.UnavailableType),
 	}
 	if err := storage.Instance().InsertOrUpdateUser(&user); err != nil {
-		log.Error(err)
+		logger.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
 	}
@@ -171,7 +171,7 @@ func (x *Register) cancelRegistration(iq *xmpp.IQ, query xmpp.XElement, stm stre
 		return
 	}
 	if err := storage.Instance().DeleteUser(stm.Username()); err != nil {
-		log.Error(err)
+		logger.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
 	}
@@ -194,7 +194,7 @@ func (x *Register) changePassword(password string, username string, iq *xmpp.IQ,
 	}
 	user, err := storage.Instance().FetchUser(username)
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
 	}
@@ -205,7 +205,7 @@ func (x *Register) changePassword(password string, username string, iq *xmpp.IQ,
 	if user.Password != password {
 		user.Password = password
 		if err := storage.Instance().InsertOrUpdateUser(user); err != nil {
-			log.Error(err)
+			logger.Error(err)
 			stm.SendElement(iq.InternalServerError())
 			return
 		}

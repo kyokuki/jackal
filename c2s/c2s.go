@@ -8,7 +8,7 @@ package c2s
 import (
 	"sync"
 
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/pkg/errors"
 )
 
@@ -43,13 +43,13 @@ func Initialize(srvConfigurations []Config) {
 		return
 	}
 	if len(srvConfigurations) == 0 {
-		log.Error(errors.New("at least one c2s configuration is required"))
+		logger.Error(errors.New("at least one c2s configuration is required"))
 		return
 	}
 	// initialize all servers
 	for i := 0; i < len(srvConfigurations); i++ {
 		if _, err := initializeServer(&srvConfigurations[i]); err != nil {
-			log.Fatalf("%v", err)
+			logger.Fatalf("%v", err)
 		}
 	}
 	initialized = true
@@ -62,7 +62,7 @@ func Initialize(srvConfigurations []Config) {
 	// close all servers
 	for k, srv := range servers {
 		if err := srv.shutdown(); err != nil {
-			log.Error(err)
+			logger.Error(err)
 		}
 		delete(servers, k)
 	}

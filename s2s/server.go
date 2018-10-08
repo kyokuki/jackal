@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/transport"
 )
 
@@ -27,10 +27,10 @@ func (s *server) start() {
 	port := s.cfg.Transport.Port
 	address := bindAddr + ":" + strconv.Itoa(port)
 
-	log.Infof("s2s_in: listening at %s", address)
+	logger.Infof("s2s_in: listening at %s", address)
 
 	if err := s.listenConn(address); err != nil {
-		log.Fatalf("%v", err)
+		logger.Fatalf("%v", err)
 	}
 }
 

@@ -8,7 +8,7 @@ package xep0030
 import (
 	"sync"
 
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/router"
@@ -149,7 +149,7 @@ func (sp *serverProvider) isSubscribedTo(contact *jid.JID, userJID *jid.JID) boo
 	}
 	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contact.ToBareJID().String())
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		return false
 	}
 	if ri == nil {

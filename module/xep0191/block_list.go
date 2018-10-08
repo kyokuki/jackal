@@ -6,7 +6,7 @@
 package xep0191
 
 import (
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/module/roster"
@@ -94,7 +94,7 @@ func (x *BlockingCommand) sendBlockList(iq *xmpp.IQ, stm stream.C2S) {
 	fromJID := iq.FromJID()
 	blItms, err := storage.Instance().FetchBlockListItems(fromJID.Node())
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
 	}
@@ -121,13 +121,13 @@ func (x *BlockingCommand) block(iq *xmpp.IQ, block xmpp.XElement, stm stream.C2S
 	}
 	jds, err := x.extractItemJIDs(items)
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		stm.SendElement(iq.JidMalformedError())
 		return
 	}
 	blItems, ris, err := x.fetchBlockListAndRosterItems(stm)
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
 	}
@@ -139,7 +139,7 @@ func (x *BlockingCommand) block(iq *xmpp.IQ, block xmpp.XElement, stm stream.C2S
 		}
 	}
 	if err := storage.Instance().InsertBlockListItems(bl); err != nil {
-		log.Error(err)
+		logger.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
 	}
@@ -153,13 +153,13 @@ func (x *BlockingCommand) unblock(iq *xmpp.IQ, unblock xmpp.XElement, stm stream
 	items := unblock.Elements().Children("item")
 	jds, err := x.extractItemJIDs(items)
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		stm.SendElement(iq.JidMalformedError())
 		return
 	}
 	blItems, ris, err := x.fetchBlockListAndRosterItems(stm)
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
 	}
@@ -181,7 +181,7 @@ func (x *BlockingCommand) unblock(iq *xmpp.IQ, unblock xmpp.XElement, stm stream
 		}
 	}
 	if err := storage.Instance().DeleteBlockListItems(bl); err != nil {
-		log.Error(err)
+		logger.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
 	}

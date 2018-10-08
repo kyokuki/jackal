@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/host"
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
@@ -62,7 +62,7 @@ func (r *Roster) MatchesIQ(iq *xmpp.IQ) bool {
 func (r *Roster) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
 	r.actorCh <- func() {
 		if err := r.processIQ(iq, stm); err != nil {
-			log.Error(err)
+			logger.Error(err)
 		}
 	}
 }
@@ -71,7 +71,7 @@ func (r *Roster) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
 func (r *Roster) ProcessPresence(presence *xmpp.Presence) {
 	r.actorCh <- func() {
 		if err := r.processPresence(presence); err != nil {
-			log.Error(err)
+			logger.Error(err)
 		}
 	}
 }
@@ -123,7 +123,7 @@ func (r *Roster) sendRoster(iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) er
 	}
 	userJID := stm.JID()
 
-	log.Infof("retrieving user roster... (%s)", userJID)
+	logger.Infof("retrieving user roster... (%s)", userJID)
 
 	itms, ver, err := storage.Instance().FetchRosterItems(userJID.Node())
 	if err != nil {
@@ -193,7 +193,7 @@ func (r *Roster) updateItem(ri *rostermodel.Item, stm stream.C2S) error {
 	userJID := stm.JID().ToBareJID()
 	contactJID := ri.ContactJID()
 
-	log.Infof("updating roster item - contact: %s (%s)", contactJID, userJID)
+	logger.Infof("updating roster item - contact: %s (%s)", contactJID, userJID)
 
 	usrRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.String())
 	if err != nil {
@@ -225,7 +225,7 @@ func (r *Roster) removeItem(ri *rostermodel.Item, stm stream.C2S) error {
 	userJID := stm.JID().ToBareJID()
 	contactJID := ri.ContactJID()
 
-	log.Infof("removing roster item: %v (%s)", contactJID, userJID)
+	logger.Infof("removing roster item: %v (%s)", contactJID, userJID)
 
 	usrRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.String())
 	if err != nil {
@@ -314,7 +314,7 @@ func (r *Roster) processSubscribe(presence *xmpp.Presence) error {
 	userJID := presence.FromJID().ToBareJID()
 	contactJID := presence.ToJID().ToBareJID()
 
-	log.Infof("processing 'subscribe' - contact: %s (%s)", contactJID, userJID)
+	logger.Infof("processing 'subscribe' - contact: %s (%s)", contactJID, userJID)
 
 	if host.IsLocalHost(userJID.Domain()) {
 		usrRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.String())
@@ -363,7 +363,7 @@ func (r *Roster) processSubscribed(presence *xmpp.Presence) error {
 	userJID := presence.ToJID().ToBareJID()
 	contactJID := presence.FromJID().ToBareJID()
 
-	log.Infof("processing 'subscribed' - user: %s (%s)", userJID, contactJID)
+	logger.Infof("processing 'subscribed' - user: %s (%s)", userJID, contactJID)
 
 	if host.IsLocalHost(contactJID.Domain()) {
 		_, err := r.deleteNotification(contactJID.Node(), userJID)
@@ -427,7 +427,7 @@ func (r *Roster) processUnsubscribe(presence *xmpp.Presence) error {
 	userJID := presence.FromJID().ToBareJID()
 	contactJID := presence.ToJID().ToBareJID()
 
-	log.Infof("processing 'unsubscribe' - contact: %s (%s)", contactJID, userJID)
+	logger.Infof("processing 'unsubscribe' - contact: %s (%s)", contactJID, userJID)
 
 	var usrSub string
 	if host.IsLocalHost(userJID.Domain()) {
@@ -482,7 +482,7 @@ func (r *Roster) processUnsubscribed(presence *xmpp.Presence) error {
 	userJID := presence.ToJID().ToBareJID()
 	contactJID := presence.FromJID().ToBareJID()
 
-	log.Infof("processing 'unsubscribed' - user: %s (%s)", userJID, contactJID)
+	logger.Infof("processing 'unsubscribed' - user: %s (%s)", userJID, contactJID)
 
 	var cntSub string
 	if host.IsLocalHost(contactJID.Domain()) {
@@ -549,7 +549,7 @@ func (r *Roster) processProbePresence(presence *xmpp.Presence) error {
 	userJID := presence.ToJID().ToBareJID()
 	contactJID := presence.FromJID().ToBareJID()
 
-	log.Infof("processing 'probe' - user: %s (%s)", userJID, contactJID)
+	logger.Infof("processing 'probe' - user: %s (%s)", userJID, contactJID)
 
 	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.String())
 	if err != nil {
@@ -581,7 +581,7 @@ func (r *Roster) processAvailablePresence(presence *xmpp.Presence) error {
 
 	// keep track of available presences
 	if presence.IsAvailable() {
-		log.Infof("processing 'available' - user: %s", fromJID)
+		logger.Infof("processing 'available' - user: %s", fromJID)
 		if _, loaded := r.onlineJIDs.LoadOrStore(fromJID.String(), presence); !loaded {
 			if replyOnBehalf {
 				if err := r.deliverRosterPresences(userJID); err != nil {
@@ -590,7 +590,7 @@ func (r *Roster) processAvailablePresence(presence *xmpp.Presence) error {
 			}
 		}
 	} else {
-		log.Infof("processing 'unavailable' - user: %s", fromJID)
+		logger.Infof("processing 'unavailable' - user: %s", fromJID)
 		r.onlineJIDs.Delete(fromJID.String())
 	}
 	if replyOnBehalf {

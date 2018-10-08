@@ -7,7 +7,7 @@ debug:
 
 logger:
   level: debug
-  log_path: jackal.log
+  log_path: jackal.logger
 
 storage:
   type: mysql

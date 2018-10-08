@@ -8,6 +8,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -17,7 +18,7 @@ import (
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/host"
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/s2s"
@@ -81,7 +82,7 @@ func main() {
 		return
 	}
 	// initialize subsystems... (order matters)
-	log.Initialize(&cfg.Logger)
+	initLogger(&cfg.Logger)
 
 	storage.Initialize(&cfg.Storage)
 
@@ -95,14 +96,14 @@ func main() {
 
 	// create PID file
 	if err := createPIDFile(cfg.PIDFile); err != nil {
-		log.Warnf("%v", err)
+		logger.Warnf("%v", err)
 	}
 	// start serving...
 	for i := range logoStr {
-		log.Infof("%s", logoStr[i])
+		logger.Infof("%s", logoStr[i])
 	}
-	log.Infof("")
-	log.Infof("jackal %v\n", version.ApplicationVersion)
+	logger.Infof("")
+	logger.Infof("jackal %v\n", version.ApplicationVersion)
 
 	// initialize debug server...
 	if cfg.Debug.Port > 0 {
@@ -122,9 +123,30 @@ func initDebugServer(port int) {
 	debugSrv = &http.Server{}
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		log.Fatalf("%v", err)
+		logger.Fatalf("%v", err)
 	}
 	debugSrv.Serve(ln)
+}
+
+func initLogger(cfg *LoggerConfig) error {
+	writers := []io.Writer{os.Stdout}
+	if len(cfg.LogPath) > 0 {
+		// create logFile intermediate directories.
+		if err := os.MkdirAll(filepath.Dir(cfg.LogPath), os.ModePerm); err != nil {
+			return err
+		}
+		f, err := os.OpenFile(cfg.LogPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
+		if err != nil {
+			return err
+		}
+		writers = append(writers, f)
+	}
+	l, err := logger.New(cfg.Level, writers...)
+	if err != nil {
+		return err
+	}
+	logger.Set(l)
+	return nil
 }
 
 func createPIDFile(pidFile string) error {

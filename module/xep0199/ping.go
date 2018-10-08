@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/errors"
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
@@ -132,9 +132,9 @@ func (x *Ping) processIQ(iq *xmpp.IQ, stm stream.C2S) {
 		stm.SendElement(iq.BadRequestError())
 		return
 	}
-	log.Infof("received ping... id: %s", iq.ID())
+	logger.Infof("received ping... id: %s", iq.ID())
 	if iq.IsGet() {
-		log.Infof("sent pong... id: %s", iq.ID())
+		logger.Infof("sent pong... id: %s", iq.ID())
 		stm.SendElement(iq.ResultIQ())
 	} else {
 		stm.SendElement(iq.BadRequestError())
@@ -186,7 +186,7 @@ func (x *Ping) schedulePingTimer(stm stream.C2S) {
 func (x *Ping) handlePongIQ(iq *xmpp.IQ, stm stream.C2S) {
 	pongID := iq.ID()
 	if pi := x.activePings[pongID]; pi != nil && pi.stm == stm {
-		log.Infof("received pong... id: %s", pongID)
+		logger.Infof("received pong... id: %s", pongID)
 
 		pi.timer.Stop()
 		x.schedulePingTimer(stm)
@@ -203,7 +203,7 @@ func (x *Ping) sendPing(pi *ping) {
 
 	pi.stm.SendElement(iq)
 
-	log.Infof("sent ping... id: %s", pi.identifier)
+	logger.Infof("sent ping... id: %s", pi.identifier)
 
 	pi.timer = time.AfterFunc(x.cfg.SendInterval/3, func() {
 		x.actorCh <- func() { x.disconnectStream(pi) }

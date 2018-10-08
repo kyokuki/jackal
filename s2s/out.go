@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 
 	"github.com/ortuman/jackal/errors"
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/session"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -258,11 +258,11 @@ func (s *outStream) handleValidatingDialbackKey(elem xmpp.XElement) {
 		}
 		switch elem.Type() {
 		case "valid":
-			log.Infof("s2s out stream successfully validated... (domainpair: %s)", s.ID())
+			logger.Infof("s2s out stream successfully validated... (domainpair: %s)", s.ID())
 			s.finishVerification()
 
 		default:
-			log.Infof("failed s2s out stream validation... (domainpair: %s)", s.ID())
+			logger.Infof("failed s2s out stream validation... (domainpair: %s)", s.ID())
 			s.disconnectWithStreamError(streamerror.ErrRemoteConnectionFailed)
 		}
 	}
@@ -318,7 +318,7 @@ func (s *outStream) handleSessionError(sErr *session.Error) {
 	case *xmpp.StanzaError:
 		s.writeStanzaErrorResponse(sErr.Element, err)
 	default:
-		log.Error(err)
+		logger.Error(err)
 		s.disconnectWithStreamError(streamerror.ErrUndefinedCondition)
 	}
 }
@@ -331,7 +331,7 @@ func (s *outStream) disconnect(err error) {
 		if stmErr, ok := err.(*streamerror.Error); ok {
 			s.disconnectWithStreamError(stmErr)
 		} else {
-			log.Error(err)
+			logger.Error(err)
 			s.disconnectClosingSession(false)
 		}
 	}

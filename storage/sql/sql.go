@@ -13,7 +13,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	sq "github.com/Masterminds/squirrel"
 	_ "github.com/go-sql-driver/mysql" // SQL driver
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/pool"
 )
 
@@ -62,12 +62,12 @@ func New(cfg *Config) *Storage {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", user, pass, host, db)
 	s.db, err = sql.Open("mysql", dsn)
 	if err != nil {
-		log.Fatalf("%v", err)
+		logger.Fatalf("%v", err)
 	}
 	s.db.SetMaxOpenConns(poolSize) // set max opened connection count
 
 	if err := s.db.Ping(); err != nil {
-		log.Fatalf("%v", err)
+		logger.Fatalf("%v", err)
 	}
 	go s.loop()
 
@@ -83,7 +83,7 @@ func NewMock() (*Storage, sqlmock.Sqlmock) {
 	}
 	s.db, sqlMock, err = sqlmock.New()
 	if err != nil {
-		log.Fatalf("%v", err)
+		logger.Fatalf("%v", err)
 	}
 	return s, sqlMock
 }
@@ -103,7 +103,7 @@ func (s *Storage) loop() {
 		case <-tc.C:
 			err := s.db.Ping()
 			if err != nil {
-				log.Error(err)
+				logger.Error(err)
 			}
 		case ch := <-s.doneCh:
 			s.db.Close()

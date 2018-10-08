@@ -16,7 +16,7 @@ import (
 
 	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/host"
-	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/logger"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -174,7 +174,7 @@ func (s *Session) Open() error {
 	ops.ToXML(buf, includeClosing)
 
 	openStr := buf.String()
-	log.Debugf("SEND(%s): %s", s.id, openStr)
+	logger.Debugf("SEND(%s): %s", s.id, openStr)
 
 	_, err := io.Copy(s.tr, strings.NewReader(openStr))
 	return err
@@ -201,7 +201,7 @@ func (s *Session) Send(elem xmpp.XElement) {
 	if e, ok := elem.(namespaceSettable); elem.IsStanza() && ok {
 		e.SetNamespace("")
 	}
-	log.Debugf("SEND(%s): %v", s.id, elem)
+	logger.Debugf("SEND(%s): %v", s.id, elem)
 	elem.ToXML(s.tr, true)
 }
 
@@ -211,7 +211,7 @@ func (s *Session) Receive() (xmpp.XElement, *Error) {
 	if err != nil {
 		return nil, s.mapErrorToSessionError(err)
 	} else if elem != nil {
-		log.Debugf("RECV(%s): %v", s.id, elem)
+		logger.Debugf("RECV(%s): %v", s.id, elem)
 
 		if atomic.LoadUint32(&s.started) == 0 {
 			if err := s.validateStreamElement(elem); err != nil {
@@ -247,7 +247,7 @@ func (s *Session) buildStanza(elem xmpp.XElement) (xmpp.Stanza, *Error) {
 	case "iq":
 		iq, err := xmpp.NewIQFromElement(elem, fromJID, toJID)
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 			return nil, &Error{Element: elem, UnderlyingErr: xmpp.ErrBadRequest}
 		}
 		return iq, nil
@@ -255,7 +255,7 @@ func (s *Session) buildStanza(elem xmpp.XElement) (xmpp.Stanza, *Error) {
 	case "presence":
 		presence, err := xmpp.NewPresenceFromElement(elem, fromJID, toJID)
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 			return nil, &Error{Element: elem, UnderlyingErr: xmpp.ErrBadRequest}
 		}
 		return presence, nil
@@ -263,7 +263,7 @@ func (s *Session) buildStanza(elem xmpp.XElement) (xmpp.Stanza, *Error) {
 	case "message":
 		message, err := xmpp.NewMessageFromElement(elem, fromJID, toJID)
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 			return nil, &Error{Element: elem, UnderlyingErr: xmpp.ErrBadRequest}
 		}
 		return message, nil
