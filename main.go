@@ -8,6 +8,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -77,11 +78,30 @@ func main() {
 	// load configuration
 	var cfg Config
 	if err := cfg.FromFile(configFile); err != nil {
-		fmt.Fprintf(os.Stderr, "jackal: %v\n", err)
+		logError(err)
 		return
 	}
-	// initialize subsystems... (order matters)
-	log.Initialize(&cfg.Logger)
+	// initialize logger
+	writers := []io.Writer{os.Stdout}
+	if len(cfg.Logger.LogPath) > 0 {
+		// create logFile intermediate directories.
+		if err := os.MkdirAll(filepath.Dir(cfg.Logger.LogPath), os.ModePerm); err != nil {
+			logError(err)
+			return
+		}
+		f, err := os.OpenFile(cfg.Logger.LogPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
+		if err != nil {
+			logError(err)
+			return
+		}
+		writers = append(writers, f)
+	}
+	logger, err := log.New(cfg.Logger.Level, writers...)
+	if err != nil {
+		logError(err)
+	}
+	log.Init(logger)
+	defer log.Close()
 
 	storage.Initialize(&cfg.Storage)
 
@@ -89,8 +109,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	host.Close()
 	host.Init(hm)
+	defer host.Close()
 
 	router.Initialize(&router.Config{GetS2SOut: s2s.GetS2SOut})
 
@@ -148,4 +168,8 @@ func createPIDFile(pidFile string) error {
 		return err
 	}
 	return nil
+}
+
+func logError(err error) {
+	fmt.Fprintf(os.Stderr, "jackal: %v\n", err)
 }
