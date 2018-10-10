@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	errAlreadyInitialized = errors.New("host: manager already initialized")
-	errNotInitialized     = errors.New("host: manager not initialized")
+	errManagerAlreadyInitialized = errors.New("host: manager already initialized")
+	errManagerNotInitialized     = errors.New("host: manager not initialized")
 )
 
 const defaultDomain = "localhost"
@@ -26,7 +26,7 @@ type Manager interface {
 	HostNames() []string
 	IsLocalHost(domain string) bool
 	Certificates() []tls.Certificate
-	Close() error
+	Close()
 }
 
 var (
@@ -35,14 +35,14 @@ var (
 
 func Init(manager Manager) {
 	if !atomic.CompareAndSwapPointer(&inst, unsafe.Pointer(nil), unsafe.Pointer(&manager)) {
-		panic(errAlreadyInitialized)
+		panic(errManagerAlreadyInitialized)
 	}
 }
 
 func Close() {
 	ptr := atomic.SwapPointer(&inst, unsafe.Pointer(nil))
 	if ptr == nil {
-		panic(errNotInitialized)
+		panic(errManagerNotInitialized)
 	}
 	(*(*Manager)(ptr)).Close()
 }
@@ -65,7 +65,7 @@ func Certificates() []tls.Certificate {
 func instance() Manager {
 	ptr := atomic.LoadPointer(&inst)
 	if ptr == nil {
-		panic(errNotInitialized)
+		panic(errManagerNotInitialized)
 	}
 	return *(*Manager)(ptr)
 }
@@ -120,6 +120,4 @@ func (hm *manager) Certificates() []tls.Certificate {
 	return certs
 }
 
-func (hm *manager) Close() error {
-	return nil
-}
+func (hm *manager) Close() {}

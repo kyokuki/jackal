@@ -6,17 +6,23 @@
 package log
 
 import (
+	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
+	"unsafe"
+)
+
+var (
+	errLoggerAlreadyInitialized = errors.New("log: logger already initialized")
+	errLoggerNotInitialized     = errors.New("log: logger not initialized")
 )
 
 const logChanBufferSize = 512
@@ -27,36 +33,57 @@ var exitHandler = func() { os.Exit(-1) }
 
 // singleton interface
 var (
-	instMu      sync.RWMutex
-	inst        *Logger
-	initialized bool
+	inst unsafe.Pointer
 )
 
-// Logger object is used to log messages for a specific system or application component.
-type Logger struct {
-	level     LogLevel
-	outWriter io.Writer
-	f         *os.File
-	recCh     chan record
-	closeCh   chan bool
-	b         strings.Builder
+// Level represents log level type.
+type Level int
+
+const (
+	// DebugLevel represents DEBUG log level.
+	DebugLevel Level = iota
+
+	// InfoLevel represents INFO log level.
+	InfoLevel
+
+	// WarningLevel represents WARNING log level.
+	WarningLevel
+
+	// ErrorLevel represents ERROR log level.
+	ErrorLevel
+
+	// FatalLevel represents FATAL log level.
+	FatalLevel
+)
+
+type Logger interface {
+	Level() Level
+	Log(format string, args []interface{}, pkg string, file string, line int, level Level, async bool)
+	Close()
 }
 
-func newLogger(cfg *Config, outWriter io.Writer) (*Logger, error) {
-	l := &Logger{
-		level:     cfg.Level,
-		outWriter: outWriter,
+func Init(logger Logger) {
+	if !atomic.CompareAndSwapPointer(&inst, unsafe.Pointer(nil), unsafe.Pointer(&logger)) {
+		panic(errLoggerAlreadyInitialized)
 	}
-	if len(cfg.LogPath) > 0 {
-		// create logFile intermediate directories.
-		if err := os.MkdirAll(filepath.Dir(cfg.LogPath), os.ModePerm); err != nil {
-			return nil, err
-		}
-		f, err := os.OpenFile(cfg.LogPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
-		if err != nil {
-			return nil, err
-		}
-		l.f = f
+}
+
+func Close() {
+	ptr := atomic.SwapPointer(&inst, unsafe.Pointer(nil))
+	if ptr == nil {
+		panic(errLoggerNotInitialized)
+	}
+	(*(*Logger)(ptr)).Close()
+}
+
+func New(level string, writers ...io.Writer) (Logger, error) {
+	lvl, err := levelFromString(level)
+	if err != nil {
+		return nil, err
+	}
+	l := &logger{
+		level:   lvl,
+		writers: writers,
 	}
 	l.recCh = make(chan record, logChanBufferSize)
 	l.closeCh = make(chan bool)
@@ -64,101 +91,66 @@ func newLogger(cfg *Config, outWriter io.Writer) (*Logger, error) {
 	return l, nil
 }
 
-// Initialize initializes the default log subsystem.
-func Initialize(cfg *Config) {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if initialized {
-		return
-	}
-	l, err := newLogger(cfg, os.Stdout)
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-	inst = l
-	initialized = true
-}
-
-func instance() *Logger {
-	instMu.RLock()
-	defer instMu.RUnlock()
-	return inst
-}
-
-// Shutdown shuts down log sub system.
-// This method should be used only for testing purposes.
-func Shutdown() {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if !initialized {
-		return
-	}
-	inst.closeCh <- true
-	inst = nil
-	initialized = false
-}
-
-// Debugf logs a 'debug' message to the log file
-// and echoes it to the console.
+// Debugf writes a 'debug' message to configured logger.
 func Debugf(format string, args ...interface{}) {
-	if inst := instance(); inst != nil && inst.level <= DebugLevel {
+	if inst := instance(); inst.Level() <= DebugLevel {
 		ci := getCallerInfo()
-		inst.writeLog(ci.pkg, ci.filename, ci.line, format, DebugLevel, true, args...)
+		inst.Log(format, args, ci.pkg, ci.filename, ci.line, DebugLevel, true)
 	}
 }
 
-// Infof logs an 'info' message to the log file
-// and echoes it to the console.
+// Infof writes a 'info' message to configured logger.
 func Infof(format string, args ...interface{}) {
-	if inst := instance(); inst != nil && inst.level <= InfoLevel {
+	if inst := instance(); inst.Level() <= InfoLevel {
 		ci := getCallerInfo()
-		inst.writeLog(ci.pkg, ci.filename, ci.line, format, InfoLevel, true, args...)
+		inst.Log(format, args, ci.pkg, ci.filename, ci.line, InfoLevel, true)
 	}
 }
 
-// Warnf logs a 'warning' message to the log file
-// and echoes it to the console.
+// Warnf writes a 'warning' message to configured logger.
 func Warnf(format string, args ...interface{}) {
-	if inst := instance(); inst != nil && inst.level <= WarningLevel {
+	if inst := instance(); inst.Level() <= WarningLevel {
 		ci := getCallerInfo()
-		inst.writeLog(ci.pkg, ci.filename, ci.line, format, WarningLevel, true, args...)
+		inst.Log(format, args, ci.pkg, ci.filename, ci.line, WarningLevel, true)
 	}
 }
 
-// Errorf logs an 'error' message to the log file
-// and echoes it to the console.
+// Errorf writes an 'error' message to configured logger.
 func Errorf(format string, args ...interface{}) {
-	if inst := instance(); inst != nil && inst.level <= ErrorLevel {
+	if inst := instance(); inst.Level() <= ErrorLevel {
 		ci := getCallerInfo()
-		inst.writeLog(ci.pkg, ci.filename, ci.line, format, ErrorLevel, true, args...)
+		inst.Log(format, args, ci.pkg, ci.filename, ci.line, ErrorLevel, true)
 	}
 }
 
-// Fatalf logs a 'fatal' message to the log file
-// and echoes it to the console.
+// Fatalf writes a 'fatal' message to configured logger.
 // Application should terminate after logging.
 func Fatalf(format string, args ...interface{}) {
-	if inst := instance(); inst != nil {
-		ci := getCallerInfo()
-		inst.writeLog(ci.pkg, ci.filename, ci.line, format, FatalLevel, false, args...)
-	}
+	ci := getCallerInfo()
+	instance().Log(format, args, ci.pkg, ci.filename, ci.line, FatalLevel, false)
 }
 
-// Error logs an 'error' value to the log file
-// and echoes it to the console.
+// Error writes an error value to configured logger.
 func Error(err error) {
-	if inst := instance(); inst != nil && inst.level <= ErrorLevel {
+	if inst := instance(); inst.Level() <= ErrorLevel {
 		ci := getCallerInfo()
-		inst.writeLog(ci.pkg, ci.filename, ci.line, "%v", ErrorLevel, true, err)
+		inst.Log("%v", []interface{}{err}, ci.pkg, ci.filename, ci.line, ErrorLevel, true)
 	}
 }
 
-// Fatal logs an 'error' value to the log file
-// and echoes it to the console.
+// Fatal writes an error value to configured logger.
 // Application should terminate after logging.
 func Fatal(err error) {
 	ci := getCallerInfo()
-	inst.writeLog(ci.pkg, ci.filename, ci.line, "%v", FatalLevel, true, err)
+	instance().Log("%v", []interface{}{err}, ci.pkg, ci.filename, ci.line, FatalLevel, false)
+}
+
+func instance() Logger {
+	ptr := atomic.LoadPointer(&inst)
+	if ptr == nil {
+		panic(errLoggerNotInitialized)
+	}
+	return *(*Logger)(ptr)
 }
 
 type callerInfo struct {
@@ -168,7 +160,7 @@ type callerInfo struct {
 }
 
 type record struct {
-	level      LogLevel
+	level      Level
 	pkg        string
 	file       string
 	line       int
@@ -176,7 +168,19 @@ type record struct {
 	continueCh chan struct{}
 }
 
-func (l *Logger) writeLog(pkg, file string, line int, format string, level LogLevel, async bool, args ...interface{}) {
+type logger struct {
+	level   Level
+	writers []io.Writer
+	b       strings.Builder
+	recCh   chan record
+	closeCh chan bool
+}
+
+func (l *logger) Level() Level {
+	return l.level
+}
+
+func (l *logger) Log(format string, args []interface{}, pkg string, file string, line int, level Level, async bool) {
 	entry := record{
 		level:      level,
 		pkg:        pkg,
@@ -195,7 +199,11 @@ func (l *Logger) writeLog(pkg, file string, line int, format string, level LogLe
 	}
 }
 
-func (l *Logger) loop() {
+func (l *logger) Close() {
+	close(l.closeCh)
+}
+
+func (l *logger) loop() {
 	for {
 		select {
 		case rec := <-l.recCh:
@@ -220,22 +228,15 @@ func (l *Logger) loop() {
 			l.b.WriteString("\n")
 
 			line := l.b.String()
-			if l.f != nil {
-				l.f.WriteString(line)
+			for _, w := range l.writers {
+				fmt.Fprintf(w, line)
 			}
-			switch rec.level {
-			case DebugLevel, WarningLevel, InfoLevel, ErrorLevel:
-				fmt.Fprintf(l.outWriter, line)
-			case FatalLevel:
-				fmt.Fprintf(l.outWriter, line)
+			if rec.level == FatalLevel {
 				exitHandler()
 			}
 			close(rec.continueCh)
 
 		case <-l.closeCh:
-			if l.f != nil {
-				l.f.Close()
-			}
 			return
 		}
 	}
@@ -259,7 +260,7 @@ func getCallerInfo() callerInfo {
 	return ci
 }
 
-func logLevelAbbreviation(level LogLevel) string {
+func logLevelAbbreviation(level Level) string {
 	switch level {
 	case DebugLevel:
 		return "DBG"
@@ -277,7 +278,7 @@ func logLevelAbbreviation(level LogLevel) string {
 	}
 }
 
-func logLevelGlyph(level LogLevel) string {
+func logLevelGlyph(level Level) string {
 	switch level {
 	case DebugLevel:
 		return "\U0001f50D"
@@ -293,4 +294,20 @@ func logLevelGlyph(level LogLevel) string {
 		// should not be reached
 		return ""
 	}
+}
+
+func levelFromString(level string) (Level, error) {
+	switch strings.ToLower(level) {
+	case "debug":
+		return DebugLevel, nil
+	case "", "info":
+		return InfoLevel, nil
+	case "warning":
+		return WarningLevel, nil
+	case "error":
+		return ErrorLevel, nil
+	case "fatal":
+		return FatalLevel, nil
+	}
+	return Level(-1), fmt.Errorf("log: unrecognized level: %s", level)
 }

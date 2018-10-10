@@ -12,7 +12,6 @@ import (
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/host"
-	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/s2s"
 	"github.com/ortuman/jackal/storage"
@@ -30,11 +29,16 @@ type TLSConfig struct {
 	PrivKeyFile string `yaml:"privkey_path"`
 }
 
+type LoggerConfig struct {
+	Level   string `yaml:"level"`
+	LogPath string `yaml:"log_path"`
+}
+
 // Config represents a global configuration.
 type Config struct {
 	PIDFile    string           `yaml:"pid_path"`
 	Debug      DebugConfig      `yaml:"debug"`
-	Logger     log.Config       `yaml:"logger"`
+	Logger     LoggerConfig     `yaml:"logger"`
 	Storage    storage.Config   `yaml:"storage"`
 	Hosts      []host.Config    `yaml:"hosts"`
 	Modules    module.Config    `yaml:"modules"`
