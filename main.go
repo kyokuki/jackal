@@ -85,7 +85,12 @@ func main() {
 
 	storage.Initialize(&cfg.Storage)
 
-	host.Initialize(cfg.Hosts)
+	hm, err := host.New(cfg.Hosts)
+	if err != nil {
+		log.Fatal(err)
+	}
+	host.Close()
+	host.Init(hm)
 
 	router.Initialize(&router.Config{GetS2SOut: s2s.GetS2SOut})
 

@@ -7,77 +7,120 @@ package host
 
 import (
 	"crypto/tls"
-	"log"
 	"sync"
+	"sync/atomic"
+	"unsafe"
 
 	"github.com/ortuman/jackal/util"
+	"github.com/pkg/errors"
+)
+
+var (
+	errAlreadyInitialized = errors.New("host: manager already initialized")
+	errNotInitialized     = errors.New("host: manager not initialized")
 )
 
 const defaultDomain = "localhost"
 
-var (
-	instMu      sync.RWMutex
-	hosts       = make(map[string]tls.Certificate)
-	initialized bool
-)
-
-// Initialize initializes host manager sub system.
-func Initialize(configurations []Config) {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if initialized {
-		return
-	}
-	if len(configurations) > 0 {
-		for _, h := range configurations {
-			hosts[h.Name] = h.Certificate
-		}
-	} else {
-		cer, err := util.LoadCertificate("", "", defaultDomain)
-		if err != nil {
-			log.Fatalf("%v", err)
-		}
-		hosts[defaultDomain] = cer
-	}
-	initialized = true
+type Manager interface {
+	HostNames() []string
+	IsLocalHost(domain string) bool
+	Certificates() []tls.Certificate
+	Close() error
 }
 
-// Shutdown shuts down host sub system.
-func Shutdown() {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if initialized {
-		hosts = make(map[string]tls.Certificate)
-		initialized = false
+var (
+	inst unsafe.Pointer
+)
+
+func Init(manager Manager) error {
+	if !atomic.CompareAndSwapPointer(&inst, unsafe.Pointer(nil), unsafe.Pointer(&manager)) {
+		panic(errAlreadyInitialized)
 	}
+	return nil
+}
+
+func Close() {
+	ptr := atomic.SwapPointer(&inst, unsafe.Pointer(nil))
+	if ptr == nil {
+		panic(errNotInitialized)
+	}
+	(*(*Manager)(ptr)).Close()
 }
 
 // HostNames returns current registered domain names.
 func HostNames() []string {
-	instMu.RLock()
-	defer instMu.RUnlock()
+	return instance().HostNames()
+}
+
+// IsLocalHost returns true if domain is a local server domain.
+func IsLocalHost(domain string) bool {
+	return instance().IsLocalHost(domain)
+}
+
+// Certificates returns an array of all configured domain certificates.
+func Certificates() []tls.Certificate {
+	return instance().Certificates()
+}
+
+func instance() Manager {
+	ptr := atomic.LoadPointer(&inst)
+	if ptr == nil {
+		panic(errNotInitialized)
+	}
+	return *(*Manager)(ptr)
+}
+
+type manager struct {
+	mu    sync.RWMutex
+	hosts map[string]tls.Certificate
+}
+
+func New(configurations []Config) (Manager, error) {
+	hm := &manager{
+		hosts: make(map[string]tls.Certificate),
+	}
+	if len(configurations) > 0 {
+		for _, h := range configurations {
+			hm.hosts[h.Name] = h.Certificate
+		}
+	} else {
+		cer, err := util.LoadCertificate("", "", defaultDomain)
+		if err != nil {
+			return nil, err
+		}
+		hm.hosts[defaultDomain] = cer
+	}
+	return hm, nil
+}
+
+func (hm *manager) HostNames() []string {
+	hm.mu.RLock()
+	defer hm.mu.RUnlock()
 	var ret []string
-	for n, _ := range hosts {
+	for n, _ := range hm.hosts {
 		ret = append(ret, n)
 	}
 	return ret
 }
 
-// IsLocalHost returns true if domain is a local server domain.
-func IsLocalHost(domain string) bool {
-	instMu.RLock()
-	defer instMu.RUnlock()
-	_, ok := hosts[domain]
+func (hm *manager) IsLocalHost(domain string) bool {
+	hm.mu.RLock()
+	defer hm.mu.RUnlock()
+	_, ok := hm.hosts[domain]
 	return ok
 }
 
-// Certificates returns an array of all configured domain certificates.
-func Certificates() []tls.Certificate {
-	instMu.RLock()
-	defer instMu.RUnlock()
+func (hm *manager) Certificates() []tls.Certificate {
+	hm.mu.RLock()
+	defer hm.mu.RUnlock()
 	var certs []tls.Certificate
-	for _, cer := range hosts {
+	for _, cer := range hm.hosts {
 		certs = append(certs, cer)
 	}
 	return certs
+}
+
+func (hm *manager) Close() error {
+	return nil
 }

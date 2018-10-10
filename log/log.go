@@ -134,6 +134,16 @@ func Errorf(format string, args ...interface{}) {
 	}
 }
 
+// Fatalf logs a 'fatal' message to the log file
+// and echoes it to the console.
+// Application should terminate after logging.
+func Fatalf(format string, args ...interface{}) {
+	if inst := instance(); inst != nil {
+		ci := getCallerInfo()
+		inst.writeLog(ci.pkg, ci.filename, ci.line, format, FatalLevel, false, args...)
+	}
+}
+
 // Error logs an 'error' value to the log file
 // and echoes it to the console.
 func Error(err error) {
@@ -143,14 +153,12 @@ func Error(err error) {
 	}
 }
 
-// Fatalf logs a 'fatal' message to the log file
+// Fatal logs an 'error' value to the log file
 // and echoes it to the console.
-// Application will terminate after logging.
-func Fatalf(format string, args ...interface{}) {
-	if inst := instance(); inst != nil {
-		ci := getCallerInfo()
-		inst.writeLog(ci.pkg, ci.filename, ci.line, format, FatalLevel, false, args...)
-	}
+// Application should terminate after logging.
+func Fatal(err error) {
+	ci := getCallerInfo()
+	inst.writeLog(ci.pkg, ci.filename, ci.line, "%v", FatalLevel, true, err)
 }
 
 type callerInfo struct {
