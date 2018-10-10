@@ -33,11 +33,10 @@ var (
 	inst unsafe.Pointer
 )
 
-func Init(manager Manager) error {
+func Init(manager Manager) {
 	if !atomic.CompareAndSwapPointer(&inst, unsafe.Pointer(nil), unsafe.Pointer(&manager)) {
 		panic(errAlreadyInitialized)
 	}
-	return nil
 }
 
 func Close() {
