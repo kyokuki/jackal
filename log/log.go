@@ -76,21 +76,6 @@ func Close() {
 	(*(*Logger)(ptr)).Close()
 }
 
-func New(level string, writers ...io.Writer) (Logger, error) {
-	lvl, err := levelFromString(level)
-	if err != nil {
-		return nil, err
-	}
-	l := &logger{
-		level:   lvl,
-		writers: writers,
-	}
-	l.recCh = make(chan record, logChanBufferSize)
-	l.closeCh = make(chan bool)
-	go l.loop()
-	return l, nil
-}
-
 // Debugf writes a 'debug' message to configured logger.
 func Debugf(format string, args ...interface{}) {
 	if inst := instance(); inst.Level() <= DebugLevel {
@@ -174,6 +159,21 @@ type logger struct {
 	b       strings.Builder
 	recCh   chan record
 	closeCh chan bool
+}
+
+func New(level string, writers ...io.Writer) (Logger, error) {
+	lvl, err := levelFromString(level)
+	if err != nil {
+		return nil, err
+	}
+	l := &logger{
+		level:   lvl,
+		writers: writers,
+	}
+	l.recCh = make(chan record, logChanBufferSize)
+	l.closeCh = make(chan bool)
+	go l.loop()
+	return l, nil
 }
 
 func (l *logger) Level() Level {
