@@ -106,7 +106,6 @@ func (x roleType) InviteOtherUsers() bool {
 	return x.privileges().inviteOtherUsers
 }
 
-
 func (x roleType) KickParticipantsAndVisitors() bool {
 	return x.privileges().kickParticipantsAndVisitors
 }

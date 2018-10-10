@@ -81,6 +81,7 @@ func TestXEP0045_Role(t *testing.T) {
 	require.Equal(t, true, moderator.KickParticipantsAndVisitors())
 	require.Equal(t, false, participant.KickParticipantsAndVisitors())
 	require.Equal(t, false, visitor.KickParticipantsAndVisitors())
+	require.Equal(t, false, none.KickParticipantsAndVisitors())
 
 	// Grant Voice
 	require.Equal(t, true, moderator.GrantVoice())
