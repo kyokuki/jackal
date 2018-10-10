@@ -155,20 +155,22 @@ type record struct {
 
 type logger struct {
 	level   Level
-	writers []io.Writer
+	output  io.Writer
+	files   []io.WriteCloser
 	b       strings.Builder
 	recCh   chan record
 	closeCh chan bool
 }
 
-func New(level string, writers ...io.Writer) (Logger, error) {
+func New(level string, output io.Writer, files ...io.WriteCloser) (Logger, error) {
 	lvl, err := levelFromString(level)
 	if err != nil {
 		return nil, err
 	}
 	l := &logger{
-		level:   lvl,
-		writers: writers,
+		level:  lvl,
+		output: output,
+		files:  files,
 	}
 	l.recCh = make(chan record, logChanBufferSize)
 	l.closeCh = make(chan bool)
@@ -228,7 +230,9 @@ func (l *logger) loop() {
 			l.b.WriteString("\n")
 
 			line := l.b.String()
-			for _, w := range l.writers {
+
+			fmt.Fprintf(l.output, line)
+			for _, w := range l.files {
 				fmt.Fprintf(w, line)
 			}
 			if rec.level == FatalLevel {
@@ -237,6 +241,9 @@ func (l *logger) loop() {
 			close(rec.continueCh)
 
 		case <-l.closeCh:
+			for _, w := range l.files {
+				w.Close()
+			}
 			return
 		}
 	}

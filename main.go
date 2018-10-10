@@ -82,7 +82,7 @@ func main() {
 		return
 	}
 	// initialize logger
-	writers := []io.Writer{os.Stdout}
+	logFiles := []io.WriteCloser{}
 	if len(cfg.Logger.LogPath) > 0 {
 		// create logFile intermediate directories.
 		if err := os.MkdirAll(filepath.Dir(cfg.Logger.LogPath), os.ModePerm); err != nil {
@@ -94,9 +94,9 @@ func main() {
 			logError(err)
 			return
 		}
-		writers = append(writers, f)
+		logFiles = append(logFiles, f)
 	}
-	logger, err := log.New(cfg.Logger.Level, writers...)
+	logger, err := log.New(cfg.Logger.Level, os.Stdout, logFiles...)
 	if err != nil {
 		logError(err)
 	}
