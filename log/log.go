@@ -43,7 +43,7 @@ const (
 	// FatalLevel represents FATAL log level.
 	FatalLevel
 
-	// OffLevel represents a disabled log level.
+	// OffLevel represents a disabledLogger log level.
 	OffLevel
 )
 
@@ -51,35 +51,6 @@ type Logger interface {
 	Level() Level
 	Log(level Level, pkg string, file string, line int, format string, args ...interface{})
 	Close()
-}
-
-type disabled struct{}
-
-func (_ *disabled) Level() Level { return OffLevel }
-func (_ *disabled) Log(level Level, pkg string, file string, line int, format string, args ...interface{}) {
-}
-func (_ *disabled) Close() {}
-
-var (
-	instMu sync.RWMutex
-	inst   Logger
-)
-
-var Disabled Logger = &disabled{}
-
-func init() {
-	inst = Disabled
-}
-
-func Set(logger Logger) {
-	instMu.Lock()
-	inst.Close()
-	inst = logger
-	instMu.Unlock()
-}
-
-func Unset() {
-	Set(Disabled)
 }
 
 // Debugf writes a 'debug' message to configured logger.
@@ -140,11 +111,33 @@ func Fatal(err error) {
 	}
 }
 
+var (
+	instMu sync.RWMutex
+	inst   Logger
+)
+
+var Disabled Logger = &disabledLogger{}
+
+func init() {
+	inst = Disabled
+}
+
+func Set(logger Logger) {
+	instMu.Lock()
+	inst.Close()
+	inst = logger
+	instMu.Unlock()
+}
+
+func Unset() {
+	Set(Disabled)
+}
+
 func instance() Logger {
 	instMu.RLock()
-	r := inst
+	l := inst
 	instMu.RUnlock()
-	return r
+	return l
 }
 
 type callerInfo struct {

@@ -82,7 +82,7 @@ func main() {
 		return
 	}
 	// initialize logger
-	logFiles := []io.WriteCloser{}
+	var logFiles []io.WriteCloser
 	if len(cfg.Logger.LogPath) > 0 {
 		// create logFile intermediate directories.
 		if err := os.MkdirAll(filepath.Dir(cfg.Logger.LogPath), os.ModePerm); err != nil {
@@ -107,15 +107,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	storage.Init(s)
-	defer storage.Close()
+	storage.Set(s)
+	defer storage.Unset()
 
 	hm, err := host.New(cfg.Hosts)
 	if err != nil {
 		log.Fatal(err)
 	}
-	host.Init(hm)
-	defer host.Close()
+	host.Set(hm)
+	defer host.Unset()
 
 	router.Initialize(&router.Config{GetS2SOut: s2s.GetS2SOut})
 

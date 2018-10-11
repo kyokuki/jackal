@@ -8,16 +8,8 @@ package host
 import (
 	"crypto/tls"
 	"sync"
-	"sync/atomic"
-	"unsafe"
 
 	"github.com/ortuman/jackal/util"
-	"github.com/pkg/errors"
-)
-
-var (
-	errManagerAlreadyInitialized = errors.New("host: manager already initialized")
-	errManagerNotInitialized     = errors.New("host: manager not initialized")
 )
 
 const defaultDomain = "localhost"
@@ -30,21 +22,32 @@ type Manager interface {
 }
 
 var (
-	inst unsafe.Pointer
+	instMu sync.RWMutex
+	inst   Manager
 )
 
-func Init(manager Manager) {
-	if !atomic.CompareAndSwapPointer(&inst, unsafe.Pointer(nil), unsafe.Pointer(&manager)) {
-		panic(errManagerAlreadyInitialized)
-	}
+var Disabled Manager = &disabledHostManager{}
+
+func init() {
+	inst = Disabled
 }
 
-func Close() {
-	ptr := atomic.SwapPointer(&inst, unsafe.Pointer(nil))
-	if ptr == nil {
-		panic(errManagerNotInitialized)
-	}
-	(*(*Manager)(ptr)).Close()
+func Set(manager Manager) {
+	instMu.Lock()
+	inst.Close()
+	inst = manager
+	instMu.Unlock()
+}
+
+func Unset() {
+	Set(Disabled)
+}
+
+func instance() Manager {
+	instMu.RLock()
+	hm := inst
+	instMu.RUnlock()
+	return hm
 }
 
 // HostNames returns current registered domain names.
@@ -60,14 +63,6 @@ func IsLocalHost(domain string) bool {
 // Certificates returns an array of all configured domain certificates.
 func Certificates() []tls.Certificate {
 	return instance().Certificates()
-}
-
-func instance() Manager {
-	ptr := atomic.LoadPointer(&inst)
-	if ptr == nil {
-		panic(errManagerNotInitialized)
-	}
-	return *(*Manager)(ptr)
 }
 
 type manager struct {

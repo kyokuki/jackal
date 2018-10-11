@@ -6,10 +6,8 @@
 package storage
 
 import (
-	"errors"
 	"fmt"
-	"sync/atomic"
-	"unsafe"
+	"sync"
 
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/model/rostermodel"
@@ -17,11 +15,6 @@ import (
 	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/storage/sql"
 	"github.com/ortuman/jackal/xmpp"
-)
-
-var (
-	errStorageAlreadyInitialized = errors.New("storage: storage already initialized")
-	errStorageNotInitialized     = errors.New("storage: storage not initialized")
 )
 
 type userStorage interface {
@@ -205,30 +198,32 @@ type Storage interface {
 }
 
 var (
-	inst unsafe.Pointer
+	instMu sync.RWMutex
+	inst   Storage
 )
 
-func Init(storage Storage) {
-	if !atomic.CompareAndSwapPointer(&inst, unsafe.Pointer(nil), unsafe.Pointer(&storage)) {
-		panic(errStorageAlreadyInitialized)
-	}
+var Disabled Storage = &disabledStorage{}
+
+func init() {
+	inst = Disabled
 }
 
-// Close shuts down storage sub system.
-func Close() {
-	ptr := atomic.SwapPointer(&inst, unsafe.Pointer(nil))
-	if ptr == nil {
-		panic(errStorageNotInitialized)
-	}
-	(*(*Storage)(ptr)).Close()
+func Set(storage Storage) {
+	instMu.Lock()
+	inst.Close()
+	inst = storage
+	instMu.Unlock()
+}
+
+func Unset() {
+	Set(Disabled)
 }
 
 func instance() Storage {
-	ptr := atomic.LoadPointer(&inst)
-	if ptr == nil {
-		panic(errStorageNotInitialized)
-	}
-	return *(*Storage)(ptr)
+	instMu.RLock()
+	s := inst
+	instMu.RUnlock()
+	return s
 }
 
 // Initialize initializes storage sub system.
