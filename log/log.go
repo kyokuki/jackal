@@ -25,7 +25,7 @@ var (
 	errLoggerNotInitialized     = errors.New("log: logger not initialized")
 )
 
-const logChanBufferSize = 512
+const logChanBufferSize = 2048
 
 const projectFolder = "jackal"
 
