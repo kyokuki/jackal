@@ -284,7 +284,6 @@ func logLevelAbbreviation(level Level) string {
 	case FatalLevel:
 		return "FTL"
 	default:
-		// should not be reached
 		return ""
 	}
 }
