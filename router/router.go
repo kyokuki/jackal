@@ -220,7 +220,7 @@ func (r *router) getBlockList(username string) []*jid.JID {
 	if bl != nil {
 		return bl
 	}
-	blItms, err := storage.Instance().FetchBlockListItems(username)
+	blItms, err := storage.FetchBlockListItems(username)
 	if err != nil {
 		log.Error(err)
 		return nil
@@ -248,7 +248,7 @@ func (r *router) route(element xmpp.Stanza, ignoreBlocking bool) error {
 	}
 	rcps := r.userStreams(toJID.Node())
 	if len(rcps) == 0 {
-		exists, err := storage.Instance().UserExists(toJID.Node())
+		exists, err := storage.UserExists(toJID.Node())
 		if err != nil {
 			return err
 		}

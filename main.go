@@ -100,10 +100,15 @@ func main() {
 	if err != nil {
 		logError(err)
 	}
-	log.Init(logger)
-	defer log.Close()
+	log.Set(logger)
+	defer log.Unset()
 
-	storage.Initialize(&cfg.Storage)
+	s, err := storage.New(&cfg.Storage)
+	if err != nil {
+		log.Fatal(err)
+	}
+	storage.Init(s)
+	defer storage.Close()
 
 	hm, err := host.New(cfg.Hosts)
 	if err != nil {

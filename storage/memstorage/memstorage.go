@@ -47,8 +47,8 @@ func New() *Storage {
 	}
 }
 
-// Shutdown shuts down in memory storage sub system.
-func (m *Storage) Shutdown() {
+// Close shuts down in memory storage sub system.
+func (m *Storage) Close() {
 }
 
 // ActivateMockedError activates in memory mocked error.

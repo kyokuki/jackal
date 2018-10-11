@@ -81,7 +81,7 @@ func (x *VCard) getVCard(vCard xmpp.XElement, iq *xmpp.IQ, stm stream.C2S) {
 		return
 	}
 	toJID := iq.ToJID()
-	resElem, err := storage.Instance().FetchVCard(toJID.Node())
+	resElem, err := storage.FetchVCard(toJID.Node())
 	if err != nil {
 		log.Errorf("%v", err)
 		stm.SendElement(iq.InternalServerError())
@@ -104,7 +104,7 @@ func (x *VCard) setVCard(vCard xmpp.XElement, iq *xmpp.IQ, stm stream.C2S) {
 	if toJID.IsServer() || (toJID.Node() == stm.Username()) {
 		log.Infof("saving vcard... (%s/%s)", toJID.Node(), toJID.Resource())
 
-		err := storage.Instance().InsertOrUpdateVCard(vCard, toJID.Node())
+		err := storage.InsertOrUpdateVCard(vCard, toJID.Node())
 		if err != nil {
 			log.Error(err)
 			stm.SendElement(iq.InternalServerError())

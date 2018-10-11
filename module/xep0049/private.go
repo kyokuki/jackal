@@ -91,7 +91,7 @@ func (x *Private) getPrivate(iq *xmpp.IQ, q xmpp.XElement, stm stream.C2S) {
 	}
 	log.Infof("retrieving private element. ns: %s... (%s/%s)", privNS, stm.Username(), stm.Resource())
 
-	privElements, err := storage.Instance().FetchPrivateXML(privNS, stm.Username())
+	privElements, err := storage.FetchPrivateXML(privNS, stm.Username())
 	if err != nil {
 		log.Error(err)
 		stm.SendElement(iq.InternalServerError())
@@ -133,7 +133,7 @@ func (x *Private) setPrivate(iq *xmpp.IQ, q xmpp.XElement, stm stream.C2S) {
 	for ns, elements := range nsElements {
 		log.Infof("saving private element. ns: %s... (%s/%s)", ns, stm.Username(), stm.Resource())
 
-		if err := storage.Instance().InsertOrUpdatePrivateXML(elements, ns, stm.Username()); err != nil {
+		if err := storage.InsertOrUpdatePrivateXML(elements, ns, stm.Username()); err != nil {
 			log.Error(err)
 			stm.SendElement(iq.InternalServerError())
 			return
