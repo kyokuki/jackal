@@ -43,7 +43,7 @@ func FetchUser(username string) (*model.User, error) {
 
 // UserExists returns whether or not a user exists within storage.
 func UserExists(username string) (bool, error) {
-	return false, nil
+	return instance().UserExists(username)
 }
 
 type rosterStorage interface {
