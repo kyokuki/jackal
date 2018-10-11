@@ -100,8 +100,9 @@ func main() {
 	if err != nil {
 		logError(err)
 	}
-	log.Init(logger)
-	defer log.Close()
+	log.Configure(logger)
+	log.Shutdown()
+	log.Configure(logger)
 
 	storage.Initialize(&cfg.Storage)
 
