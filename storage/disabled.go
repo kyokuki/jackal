@@ -94,5 +94,6 @@ func (_ *disabledStorage) FetchBlockListItems(username string) ([]model.BlockLis
 	return nil, nil
 }
 
-func (_ *disabledStorage) Close() {
+func (_ *disabledStorage) Close() error {
+	return nil
 }

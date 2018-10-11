@@ -48,9 +48,10 @@ const (
 )
 
 type Logger interface {
+	io.Closer
+
 	Level() Level
 	Log(level Level, pkg string, file string, line int, format string, args ...interface{})
-	Close()
 }
 
 // Debugf writes a 'debug' message to configured logger.
@@ -203,8 +204,9 @@ func (l *logger) Log(level Level, pkg string, file string, line int, format stri
 	}
 }
 
-func (l *logger) Close() {
+func (l *logger) Close() error {
 	close(l.closeCh)
+	return nil
 }
 
 func (l *logger) loop() {

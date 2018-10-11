@@ -7,6 +7,7 @@ package storage
 
 import (
 	"fmt"
+	"io"
 	"sync"
 
 	"github.com/ortuman/jackal/model"
@@ -186,15 +187,14 @@ func FetchBlockListItems(username string) ([]model.BlockListItem, error) {
 
 // Storage represents an entity storage interface.
 type Storage interface {
+	io.Closer
+
 	userStorage
 	offlineStorage
 	rosterStorage
 	vCardStorage
 	privateStorage
 	blockListStorage
-
-	// Close shuts down storage sub system.
-	Close()
 }
 
 var (

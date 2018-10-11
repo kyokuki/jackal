@@ -7,6 +7,7 @@ package host
 
 import (
 	"crypto/tls"
+	"io"
 	"sync"
 
 	"github.com/ortuman/jackal/util"
@@ -15,10 +16,11 @@ import (
 const defaultDomain = "localhost"
 
 type Manager interface {
+	io.Closer
+
 	HostNames() []string
 	IsLocalHost(domain string) bool
 	Certificates() []tls.Certificate
-	Close()
 }
 
 var (
@@ -115,4 +117,4 @@ func (hm *manager) Certificates() []tls.Certificate {
 	return certs
 }
 
-func (hm *manager) Close() {}
+func (hm *manager) Close() error { return nil }

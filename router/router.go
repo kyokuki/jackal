@@ -7,6 +7,7 @@ package router
 
 import (
 	"errors"
+	"io"
 	"sync"
 
 	"github.com/ortuman/jackal/host"
@@ -39,11 +40,93 @@ var (
 	ErrFailedRemoteConnect = errors.New("router: failed remote connection")
 )
 
+type Router interface {
+	io.Closer
+
+	Bind(stm stream.C2S)
+	Unbind(stm stream.C2S)
+	UserStreams(username string) []stream.C2S
+	IsBlockedJID(jid *jid.JID, username string) bool
+	ReloadBlockList(username string)
+	Route(stanza xmpp.Stanza) error
+	MustRoute(stanza xmpp.Stanza) error
+}
+
 // Config represents router configuration.
 type Config struct {
 
-	// GetS2SOut if set, acts as an s2s outgoing stream provider.
+	// GetS2SOut when set, acts as an s2s outgoing stream provider.
 	GetS2SOut func(localDomain, remoteDomain string) (stream.S2SOut, error)
+}
+
+var (
+	instMu sync.RWMutex
+	inst   Router
+)
+
+var Disabled Router = &disabledRouter{}
+
+func init() {
+	inst = Disabled
+}
+
+func Set(router Router) {
+	instMu.Lock()
+	inst.Close()
+	inst = router
+	instMu.Unlock()
+}
+
+func Unset() {
+	Set(Disabled)
+}
+
+func instance() Router {
+	instMu.RLock()
+	r := inst
+	instMu.RUnlock()
+	return r
+}
+
+// Bind marks a c2s stream as binded.
+// An error will be returned in case no assigned resource is found.
+func Bind(stm stream.C2S) {
+	instance().Bind(stm)
+}
+
+// Unbind unbinds a previously binded c2s.
+// An error will be returned in case no assigned resource is found.
+func Unbind(stm stream.C2S) {
+	instance().Unbind(stm)
+}
+
+// UserStreams returns all streams associated to a user.
+func UserStreams(username string) []stream.C2S {
+	return instance().UserStreams(username)
+}
+
+// IsBlockedJID returns whether or not the passed jid matches any
+// of a user's blocking list JID.
+func IsBlockedJID(jid *jid.JID, username string) bool {
+	return instance().IsBlockedJID(jid, username)
+}
+
+// ReloadBlockList reloads in memory block list for a given user and starts
+// applying it for future stanza routing.
+func ReloadBlockList(username string) {
+	instance().ReloadBlockList(username)
+}
+
+// Route routes a stanza applying server rules for handling XML stanzas.
+// (https://xmpp.org/rfcs/rfc3921.html#rules)
+func Route(stanza xmpp.Stanza) error {
+	return instance().Route(stanza)
+}
+
+// MustRoute routes a stanza applying server rules for handling XML stanzas
+// ignoring blocking lists.
+func MustRoute(stanza xmpp.Stanza) error {
+	return instance().MustRoute(stanza)
 }
 
 type router struct {
@@ -54,91 +137,15 @@ type router struct {
 	blockLists   map[string][]*jid.JID
 }
 
-// singleton interface
-var (
-	instMu      sync.RWMutex
-	inst        *router
-	initialized bool
-)
-
-// Initialize initializes the router manager.
-func Initialize(cfg *Config) {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if initialized {
-		return
-	}
-	inst = &router{
-		cfg:          cfg,
+func New(config *Config) Router {
+	return &router{
+		cfg:          config,
 		blockLists:   make(map[string][]*jid.JID),
 		localStreams: make(map[string][]stream.C2S),
 	}
-	initialized = true
 }
 
-// Shutdown shuts down router manager system.
-// This method should be used only for testing purposes.
-func Shutdown() {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if !initialized {
-		return
-	}
-	inst = nil
-	initialized = false
-}
-
-// Bind marks a c2s stream as binded.
-// An error will be returned in case no assigned resource is found.
-func Bind(stm stream.C2S) {
-	instance().bind(stm)
-}
-
-// Unbind unbinds a previously binded c2s.
-// An error will be returned in case no assigned resource is found.
-func Unbind(stm stream.C2S) {
-	instance().unbind(stm)
-}
-
-// UserStreams returns all streams associated to a user.
-func UserStreams(username string) []stream.C2S {
-	return instance().userStreams(username)
-}
-
-// IsBlockedJID returns whether or not the passed jid matches any
-// of a user's blocking list JID.
-func IsBlockedJID(jid *jid.JID, username string) bool {
-	return instance().isBlockedJID(jid, username)
-}
-
-// ReloadBlockList reloads in memory block list for a given user and starts
-// applying it for future stanza routing.
-func ReloadBlockList(username string) {
-	instance().reloadBlockList(username)
-}
-
-// Route routes a stanza applying server rules for handling XML stanzas.
-// (https://xmpp.org/rfcs/rfc3921.html#rules)
-func Route(stanza xmpp.Stanza) error {
-	return instance().route(stanza, false)
-}
-
-// MustRoute routes a stanza applying server rules for handling XML stanzas
-// ignoring blocking lists.
-func MustRoute(stanza xmpp.Stanza) error {
-	return instance().route(stanza, true)
-}
-
-func instance() *router {
-	instMu.RLock()
-	defer instMu.RUnlock()
-	if inst == nil {
-		log.Fatalf("router manager not initialized")
-	}
-	return inst
-}
-
-func (r *router) bind(stm stream.C2S) {
+func (r *router) Bind(stm stream.C2S) {
 	if len(stm.Resource()) == 0 {
 		return
 	}
@@ -154,7 +161,7 @@ func (r *router) bind(stm stream.C2S) {
 	return
 }
 
-func (r *router) unbind(stm stream.C2S) {
+func (r *router) Unbind(stm stream.C2S) {
 	if len(stm.Resource()) == 0 {
 		return
 	}
@@ -178,13 +185,13 @@ func (r *router) unbind(stm stream.C2S) {
 	log.Infof("unbinded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 }
 
-func (r *router) userStreams(username string) []stream.C2S {
+func (r *router) UserStreams(username string) []stream.C2S {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.localStreams[username]
 }
 
-func (r *router) isBlockedJID(jid *jid.JID, username string) bool {
+func (r *router) IsBlockedJID(jid *jid.JID, username string) bool {
 	bl := r.getBlockList(username)
 	for _, blkJID := range bl {
 		if r.jidMatchesBlockedJID(jid, blkJID) {
@@ -192,6 +199,26 @@ func (r *router) isBlockedJID(jid *jid.JID, username string) bool {
 		}
 	}
 	return false
+}
+
+func (r *router) ReloadBlockList(username string) {
+	r.blockListsMu.Lock()
+	defer r.blockListsMu.Unlock()
+
+	delete(r.blockLists, username)
+	log.Infof("block list reloaded... (username: %s)", username)
+}
+
+func (r *router) Route(stanza xmpp.Stanza) error {
+	return r.route(stanza, false)
+}
+
+func (r *router) MustRoute(stanza xmpp.Stanza) error {
+	return r.route(stanza, true)
+}
+
+func (r *router) Close() error {
+	return nil
 }
 
 func (r *router) jidMatchesBlockedJID(j, blockedJID *jid.JID) bool {
@@ -203,14 +230,6 @@ func (r *router) jidMatchesBlockedJID(j, blockedJID *jid.JID) bool {
 		return j.Matches(blockedJID, jid.MatchesNode|jid.MatchesDomain)
 	}
 	return j.Matches(blockedJID, jid.MatchesDomain)
-}
-
-func (r *router) reloadBlockList(username string) {
-	r.blockListsMu.Lock()
-	defer r.blockListsMu.Unlock()
-
-	delete(r.blockLists, username)
-	log.Infof("block list reloaded... (username: %s)", username)
 }
 
 func (r *router) getBlockList(username string) []*jid.JID {
@@ -239,14 +258,14 @@ func (r *router) getBlockList(username string) []*jid.JID {
 func (r *router) route(element xmpp.Stanza, ignoreBlocking bool) error {
 	toJID := element.ToJID()
 	if !ignoreBlocking && !toJID.IsServer() {
-		if r.isBlockedJID(element.FromJID(), toJID.Node()) {
+		if r.IsBlockedJID(element.FromJID(), toJID.Node()) {
 			return ErrBlockedJID
 		}
 	}
 	if !host.IsLocalHost(toJID.Domain()) {
 		return r.remoteRoute(element)
 	}
-	rcps := r.userStreams(toJID.Node())
+	rcps := r.UserStreams(toJID.Node())
 	if len(rcps) == 0 {
 		exists, err := storage.UserExists(toJID.Node())
 		if err != nil {

@@ -12,4 +12,4 @@ type disabledHostManager struct{}
 func (_ *disabledHostManager) HostNames() []string             { return nil }
 func (_ *disabledHostManager) IsLocalHost(domain string) bool  { return false }
 func (_ *disabledHostManager) Certificates() []tls.Certificate { return nil }
-func (_ *disabledHostManager) Close()                          {}
+func (_ *disabledHostManager) Close() error                    { return nil }

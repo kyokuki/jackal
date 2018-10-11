@@ -60,10 +60,11 @@ func New(cfg *Config) *Storage {
 }
 
 // Close shuts down BadgerDB storage sub system.
-func (b *Storage) Close() {
+func (b *Storage) Close() error {
 	ch := make(chan bool)
 	b.doneCh <- ch
 	<-ch
+	return nil
 }
 
 func (b *Storage) loop() {

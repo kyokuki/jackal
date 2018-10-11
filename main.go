@@ -117,7 +117,8 @@ func main() {
 	host.Set(hm)
 	defer host.Unset()
 
-	router.Initialize(&router.Config{GetS2SOut: s2s.GetS2SOut})
+	router.Set(router.New(&router.Config{GetS2SOut: s2s.GetS2SOut}))
+	defer router.Unset()
 
 	// initialize modules & components...
 	module.Initialize(&cfg.Modules)
