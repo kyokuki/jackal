@@ -80,16 +80,22 @@ func NewFieldListMulti(fvar string, values []string, label string, optionsLabel 
 	return field, nil
 }
 
-func NewFieldListSingle(fvar string, value string, label string, optionsLabel string, optionsValue string) (Field, error) {
+func NewFieldListSingle(fvar string, value string, label string, optionsLabel []string, optionsValue []string) (Field, error) {
 	if len(optionsLabel) != 0 && len(optionsLabel) != len(optionsValue) {
 		return Field{}, errors.New("Invalid optionsLabel and optionsValue length")
 	}
+
+	var options []Option
+	for i := 0; i < len(optionsLabel); i++ {
+		options = append(options, Option{optionsLabel[i], optionsValue[i]})
+	}
+
 	field := Field{
 		Type:    ListSingle,
 		Var:     fvar,
 		Label:   label,
 		Values:  []string{value},
-		Options: []Option{{Label: optionsLabel, Value: optionsValue}},
+		Options: options,
 	}
 
 	return field, nil
