@@ -64,6 +64,9 @@ components:
 #    quota: 0
 #    expire_after: 600 # secs.
 
+  pubsub:
+    host: pubsub.jackal.im
+
 c2s:
   - id: default
 
