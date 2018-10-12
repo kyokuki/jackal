@@ -101,7 +101,7 @@ func (x *LastActivity) sendUserLastActivity(iq *xmpp.IQ, to *jid.JID, stm stream
 		x.sendReply(iq, 0, "", stm)
 		return
 	}
-	usr, err := storage.Instance().FetchUser(to.Node())
+	usr, err := storage.FetchUser(to.Node())
 	if err != nil {
 		log.Error(err)
 		stm.SendElement(iq.InternalServerError())
@@ -135,7 +135,7 @@ func (x *LastActivity) isSubscribedTo(contact *jid.JID, userJID *jid.JID) (bool,
 	if contact.Matches(userJID, jid.MatchesBare) {
 		return true, nil
 	}
-	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contact.ToBareJID().String())
+	ri, err := storage.FetchRosterItem(userJID.Node(), contact.ToBareJID().String())
 	if err != nil {
 		return false, err
 	}

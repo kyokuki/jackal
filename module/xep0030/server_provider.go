@@ -147,7 +147,7 @@ func (sp *serverProvider) isSubscribedTo(contact *jid.JID, userJID *jid.JID) boo
 	if contact.Matches(userJID, jid.MatchesBare) {
 		return true
 	}
-	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contact.ToBareJID().String())
+	ri, err := storage.FetchRosterItem(userJID.Node(), contact.ToBareJID().String())
 	if err != nil {
 		log.Error(err)
 		return false

@@ -82,7 +82,7 @@ func main() {
 		return
 	}
 	// initialize logger
-	logFiles := []io.WriteCloser{}
+	var logFiles []io.WriteCloser
 	if len(cfg.Logger.LogPath) > 0 {
 		// create logFile intermediate directories.
 		if err := os.MkdirAll(filepath.Dir(cfg.Logger.LogPath), os.ModePerm); err != nil {
@@ -100,19 +100,25 @@ func main() {
 	if err != nil {
 		logError(err)
 	}
-	log.Init(logger)
-	defer log.Close()
+	log.Set(logger)
+	defer log.Unset()
 
-	storage.Initialize(&cfg.Storage)
+	s, err := storage.New(&cfg.Storage)
+	if err != nil {
+		log.Fatal(err)
+	}
+	storage.Set(s)
+	defer storage.Unset()
 
 	hm, err := host.New(cfg.Hosts)
 	if err != nil {
 		log.Fatal(err)
 	}
-	host.Init(hm)
-	defer host.Close()
+	host.Set(hm)
+	defer host.Unset()
 
-	router.Initialize(&router.Config{GetS2SOut: s2s.GetS2SOut})
+	router.Set(router.New(&router.Config{GetS2SOut: s2s.GetS2SOut}))
+	defer router.Unset()
 
 	// initialize modules & components...
 	module.Initialize(&cfg.Modules)
