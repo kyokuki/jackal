@@ -7,9 +7,9 @@ package component
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 )
@@ -20,74 +20,46 @@ type Component interface {
 	ProcessStanza(stanza xmpp.Stanza, stm stream.C2S)
 }
 
-// singleton interface
-var (
-	instMu      sync.RWMutex
-	comps       map[string]Component
-	shutdownCh  chan struct{}
-	initialized bool
-)
-
-// Initialize initializes the components manager.
-func Initialize(cfg *Config) {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if initialized {
-		return
-	}
-	shutdownCh = make(chan struct{})
-
-	cs := loadComponents(cfg)
-
-	comps = make(map[string]Component)
-	for _, c := range cs {
-		host := c.Host()
-		if _, ok := comps[host]; ok {
-			log.Fatalf("%v", fmt.Errorf("component host name conflict: %s", host))
-		}
-		comps[host] = c
-	}
-	initialized = true
+type Components struct {
+	comps  map[string]Component
+	doneCh chan struct{}
 }
 
-// Shutdown shuts down components manager system.
-// This method should be used only for testing purposes.
-func Shutdown() {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if !initialized {
-		return
+func New(config *Config, discoInfo *xep0030.DiscoInfo) *Components {
+	comps := &Components{
+		comps:  make(map[string]Component),
+		doneCh: make(chan struct{}),
 	}
-	close(shutdownCh)
-	comps = nil
-	initialized = false
+	cs := comps.loadComponents(config, discoInfo)
+	for _, c := range cs {
+		host := c.Host()
+		if _, ok := comps.comps[host]; ok {
+			log.Fatal(fmt.Errorf("component host name conflict: %s", host))
+		}
+		comps.comps[host] = c
+	}
+	return comps
 }
 
 // Get returns a specific component associated to host name.
-func Get(host string) Component {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if !initialized {
-		return nil
-	}
-	return comps[host]
+func (cs *Components) Get(host string) Component {
+	return cs.comps[host]
 }
 
 // GetAll returns all initialized components.
-func GetAll() []Component {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if !initialized {
-		return nil
-	}
+func (cs *Components) GetAll() []Component {
 	var ret []Component
-	for _, comp := range comps {
+	for _, comp := range cs.comps {
 		ret = append(ret, comp)
 	}
 	return ret
 }
 
-func loadComponents(cfg *Config) []Component {
+func (cs *Components) Close() {
+	close(cs.doneCh)
+}
+
+func (cs *Components) loadComponents(config *Config, discoInfo *xep0030.DiscoInfo) []Component {
 	var ret []Component
 	/*
 		discoInfo := module.Modules().DiscoInfo

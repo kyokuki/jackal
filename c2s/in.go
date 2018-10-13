@@ -39,6 +39,7 @@ const (
 type inStream struct {
 	cfg            *streamConfig
 	mods           *module.Modules
+	comps          *component.Components
 	sess           *session.Session
 	id             string
 	connectTm      *time.Timer
@@ -57,10 +58,11 @@ type inStream struct {
 	presence      *xmpp.Presence
 }
 
-func newStream(id string, config *streamConfig, mods *module.Modules) stream.C2S {
+func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components) stream.C2S {
 	s := &inStream{
 		cfg:        config,
 		mods:       mods,
+		comps:      comps,
 		id:         id,
 		ctx:        stream.NewContext(),
 		actorCh:    make(chan func(), streamMailboxSize),
@@ -388,7 +390,7 @@ func (s *inStream) handleSessionStarted(elem xmpp.XElement) {
 		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 		return
 	}
-	if comp := component.Get(stanza.ToJID().Domain()); comp != nil { // component stanza?
+	if comp := s.comps.Get(stanza.ToJID().Domain()); comp != nil { // component stanza?
 		switch stanza := stanza.(type) {
 		case *xmpp.IQ:
 			if di := s.mods.DiscoInfo; di != nil && di.MatchesIQ(stanza) {

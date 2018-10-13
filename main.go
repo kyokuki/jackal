@@ -124,7 +124,8 @@ func main() {
 	mods := module.New(&cfg.Modules)
 	defer mods.Close()
 
-	component.Initialize(&cfg.Components)
+	comps := component.New(&cfg.Components, mods.DiscoInfo)
+	defer comps.Close()
 
 	// create PID file
 	if err := createPIDFile(cfg.PIDFile); err != nil {
@@ -146,7 +147,7 @@ func main() {
 	s2s.Initialize(cfg.S2S, mods)
 
 	// start serving c2s...
-	c2s.Initialize(cfg.C2S, mods)
+	c2s.Initialize(cfg.C2S, mods, comps)
 }
 
 var debugSrv *http.Server
@@ -171,6 +172,8 @@ func createPIDFile(pidFile string) error {
 	if err != nil {
 		return err
 	}
+	defer file.Close()
+
 	currentPid := os.Getpid()
 	if _, err := file.WriteString(strconv.FormatInt(int64(currentPid), 10)); err != nil {
 		return err
