@@ -387,14 +387,14 @@ func (s *inStream) handleSessionStarted(elem xmpp.XElement) {
 		return
 	}
 	if comp := component.Get(stanza.ToJID().Domain()); comp != nil { // component stanza?
-		switch stanza := stanza.(type) {
-		case *xmpp.IQ:
-			if di := module.Modules().DiscoInfo; di != nil && di.MatchesIQ(stanza) {
-				di.ProcessIQ(stanza, s)
-				return
-			}
-			break
-		}
+		//switch stanza := stanza.(type) {
+		//case *xmpp.IQ:
+		//	if di := module.Modules().DiscoInfo; di != nil && di.MatchesIQ(stanza) {
+		//		di.ProcessIQ(stanza, s)
+		//		return
+		//	}
+		//	break
+		//}
 		comp.ProcessStanza(stanza, s)
 	} else {
 		s.processStanza(stanza)

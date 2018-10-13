@@ -59,6 +59,14 @@ func (c *HttpUpload) loop() {
 }
 
 func (c *HttpUpload) processStanza(stanza xmpp.XElement, stm stream.C2S) {
+	switch stanza := stanza.(type) {
+	case *xmpp.IQ:
+		if c.discoInfo != nil && c.discoInfo.MatchesIQ(stanza) {
+			c.discoInfo.ProcessIQ(stanza, stm)
+			return
+		}
+		break
+	}
 }
 
 func (c *HttpUpload) registerDiscoInfo() {

@@ -54,7 +54,46 @@ func (c *PubSub) loop() {
 }
 
 func (c *PubSub) processStanza(stanza xmpp.XElement, stm stream.C2S) {
+
+	switch stanza.(type) {
+	case *xmpp.IQ:
+		iq := stanza.(*xmpp.IQ)
+		c.processIQ(iq, stm)
+	case *xmpp.Message:
+		msg := stanza.(*xmpp.Message)
+		stm.SendElement(msg.BadRequestError())
+	case *xmpp.Presence:
+		prs := stanza.(*xmpp.Message)
+		stm.SendElement(prs.BadRequestError())
+	}
 }
+
+func (c *PubSub) processIQ(iq *xmpp.IQ, stm stream.C2S) {
+
+	if c.discoInfo != nil && c.discoInfo.MatchesIQ(iq) {
+		c.discoInfo.ProcessIQ(iq, stm)
+		return
+	}
+
+	//q := iq.Elements().Child("query")
+	//node := q.Attributes().Get("node")
+	//if q != nil {
+	//	switch q.Namespace() {
+	//	case discoInfoNamespace:
+	//		di.sendDiscoInfo(prov, toJID, fromJID, node, iq, stm)
+	//		return
+	//	case discoItemsNamespace:
+	//		di.sendDiscoItems(prov, toJID, fromJID, node, iq, stm)
+	//		return
+	//	}
+	//}
+	//stm.SendElement(iq.BadRequestError())
+
+	elem :=iq.FeatureNotImplementedError()
+	stm.SendElement(elem)
+}
+
+
 
 func (c *PubSub) registerDiscoInfo() {
 	c.discoInfo.RegisterServerItem(xep0030.Item{Jid: c.Host(), Name: pubsubServiceName})
