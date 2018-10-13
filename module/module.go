@@ -6,8 +6,6 @@
 package module
 
 import (
-	"sync"
-
 	"github.com/ortuman/jackal/module/offline"
 	"github.com/ortuman/jackal/module/roster"
 	"github.com/ortuman/jackal/module/xep0012"
@@ -39,8 +37,8 @@ type IQHandler interface {
 	ProcessIQ(iq *xmpp.IQ, stm stream.C2S)
 }
 
-// Mods structure keeps reference to all active modules.
-type Mods struct {
+// Modules structure keeps reference to all active modules.
+type Modules struct {
 	Roster       *roster.Roster
 	Offline      *offline.Offline
 	LastActivity *xep0012.LastActivity
@@ -54,48 +52,13 @@ type Mods struct {
 
 	iqHandlers []IQHandler
 	all        []Module
-}
-
-var (
-	instMu      sync.RWMutex
-	mods        Mods
-	shutdownCh  chan struct{}
-	initialized bool
-)
-
-// Initialize initializes module component.
-func Initialize(cfg *Config) {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if initialized {
-		return
-	}
-	initializeModules(cfg)
-	initialized = true
-}
-
-// Shutdown shuts down module sub system stopping every active module.
-// This method should be used only for testing purposes.
-func Shutdown() {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if !initialized {
-		return
-	}
-	close(shutdownCh)
-	mods = Mods{}
-	initialized = false
-}
-
-// Modules returns current active modules.
-func Modules() Mods {
-	return mods
+	shutdownCh chan struct{}
 }
 
 // ProcessIQ process a module IQ returning 'service unavailable'
 // in case it can't be properly handled.
-func ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
-	for _, handler := range mods.iqHandlers {
+func (m *Modules) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
+	for _, handler := range m.iqHandlers {
 		if !handler.MatchesIQ(iq) {
 			continue
 		}
@@ -109,73 +72,78 @@ func ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
 	}
 }
 
-func initializeModules(cfg *Config) {
-	shutdownCh = make(chan struct{})
+func (m *Modules) Close() {
+	close(m.shutdownCh)
+}
+
+func New(config *Config) *Modules {
+	m := &Modules{shutdownCh: make(chan struct{})}
 
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
-	mods.DiscoInfo = xep0030.New(shutdownCh)
-	mods.iqHandlers = append(mods.iqHandlers, mods.DiscoInfo)
-	mods.all = append(mods.all, mods.DiscoInfo)
+	m.DiscoInfo = xep0030.New(m.shutdownCh)
+	m.iqHandlers = append(m.iqHandlers, m.DiscoInfo)
+	m.all = append(m.all, m.DiscoInfo)
 
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
-	if _, ok := cfg.Enabled["roster"]; ok {
-		mods.Roster = roster.New(&cfg.Roster, shutdownCh)
-		mods.iqHandlers = append(mods.iqHandlers, mods.Roster)
-		mods.all = append(mods.all, mods.Roster)
+	if _, ok := config.Enabled["roster"]; ok {
+		m.Roster = roster.New(&config.Roster, m.shutdownCh)
+		m.iqHandlers = append(m.iqHandlers, m.Roster)
+		m.all = append(m.all, m.Roster)
 	}
 
 	// XEP-0012: Last Activity (https://xmpp.org/extensions/xep-0012.html)
-	if _, ok := cfg.Enabled["last_activity"]; ok {
-		mods.LastActivity = xep0012.New(mods.DiscoInfo, shutdownCh)
-		mods.iqHandlers = append(mods.iqHandlers, mods.LastActivity)
-		mods.all = append(mods.all, mods.LastActivity)
+	if _, ok := config.Enabled["last_activity"]; ok {
+		m.LastActivity = xep0012.New(m.DiscoInfo, m.shutdownCh)
+		m.iqHandlers = append(m.iqHandlers, m.LastActivity)
+		m.all = append(m.all, m.LastActivity)
 	}
 
 	// XEP-0049: Private XML Storage (https://xmpp.org/extensions/xep-0049.html)
-	if _, ok := cfg.Enabled["private"]; ok {
-		mods.Private = xep0049.New(shutdownCh)
-		mods.iqHandlers = append(mods.iqHandlers, mods.Private)
-		mods.all = append(mods.all, mods.Private)
+	if _, ok := config.Enabled["private"]; ok {
+		m.Private = xep0049.New(m.shutdownCh)
+		m.iqHandlers = append(m.iqHandlers, m.Private)
+		m.all = append(m.all, m.Private)
 	}
 
 	// XEP-0054: vcard-temp (https://xmpp.org/extensions/xep-0054.html)
-	if _, ok := cfg.Enabled["vcard"]; ok {
-		mods.VCard = xep0054.New(mods.DiscoInfo, shutdownCh)
-		mods.iqHandlers = append(mods.iqHandlers, mods.VCard)
-		mods.all = append(mods.all, mods.VCard)
+	if _, ok := config.Enabled["vcard"]; ok {
+		m.VCard = xep0054.New(m.DiscoInfo, m.shutdownCh)
+		m.iqHandlers = append(m.iqHandlers, m.VCard)
+		m.all = append(m.all, m.VCard)
 	}
 
 	// XEP-0077: In-band registration (https://xmpp.org/extensions/xep-0077.html)
-	if _, ok := cfg.Enabled["registration"]; ok {
-		mods.Register = xep0077.New(&cfg.Registration, mods.DiscoInfo, shutdownCh)
-		mods.iqHandlers = append(mods.iqHandlers, mods.Register)
-		mods.all = append(mods.all, mods.Register)
+	if _, ok := config.Enabled["registration"]; ok {
+		m.Register = xep0077.New(&config.Registration, m.DiscoInfo, m.shutdownCh)
+		m.iqHandlers = append(m.iqHandlers, m.Register)
+		m.all = append(m.all, m.Register)
 	}
 
 	// XEP-0092: Software Version (https://xmpp.org/extensions/xep-0092.html)
-	if _, ok := cfg.Enabled["version"]; ok {
-		mods.Version = xep0092.New(&cfg.Version, mods.DiscoInfo, shutdownCh)
-		mods.iqHandlers = append(mods.iqHandlers, mods.Version)
-		mods.all = append(mods.all, mods.Version)
+	if _, ok := config.Enabled["version"]; ok {
+		m.Version = xep0092.New(&config.Version, m.DiscoInfo, m.shutdownCh)
+		m.iqHandlers = append(m.iqHandlers, m.Version)
+		m.all = append(m.all, m.Version)
 	}
 
 	// XEP-0160: Offline message storage (https://xmpp.org/extensions/xep-0160.html)
-	if _, ok := cfg.Enabled["offline"]; ok {
-		mods.Offline = offline.New(&cfg.Offline, mods.DiscoInfo, shutdownCh)
-		mods.all = append(mods.all, mods.Offline)
+	if _, ok := config.Enabled["offline"]; ok {
+		m.Offline = offline.New(&config.Offline, m.DiscoInfo, m.shutdownCh)
+		m.all = append(m.all, m.Offline)
 	}
 
 	// XEP-0191: Blocking Command (https://xmpp.org/extensions/xep-0191.html)
-	if _, ok := cfg.Enabled["blocking_command"]; ok {
-		mods.BlockingCmd = xep0191.New(mods.DiscoInfo, mods.Roster, shutdownCh)
-		mods.iqHandlers = append(mods.iqHandlers, mods.BlockingCmd)
-		mods.all = append(mods.all, mods.BlockingCmd)
+	if _, ok := config.Enabled["blocking_command"]; ok {
+		m.BlockingCmd = xep0191.New(m.DiscoInfo, m.Roster, m.shutdownCh)
+		m.iqHandlers = append(m.iqHandlers, m.BlockingCmd)
+		m.all = append(m.all, m.BlockingCmd)
 	}
 
 	// XEP-0199: XMPP Ping (https://xmpp.org/extensions/xep-0199.html)
-	if _, ok := cfg.Enabled["ping"]; ok {
-		mods.Ping = xep0199.New(&cfg.Ping, mods.DiscoInfo, shutdownCh)
-		mods.iqHandlers = append(mods.iqHandlers, mods.Ping)
-		mods.all = append(mods.all, mods.Ping)
+	if _, ok := config.Enabled["ping"]; ok {
+		m.Ping = xep0199.New(&config.Ping, m.DiscoInfo, m.shutdownCh)
+		m.iqHandlers = append(m.iqHandlers, m.Ping)
+		m.all = append(m.all, m.Ping)
 	}
+	return m
 }

@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/stream"
 )
 
@@ -30,7 +31,7 @@ var (
 )
 
 // Initialize initializes s2s sub system.
-func Initialize(cfg *Config) {
+func Initialize(cfg *Config, mods *module.Modules) {
 	instMu.Lock()
 	defer instMu.Unlock()
 	if initialized {
@@ -41,7 +42,7 @@ func Initialize(cfg *Config) {
 		return
 	}
 	defaultDialer = newDialer(cfg)
-	srv = &server{cfg: cfg}
+	srv = &server{cfg: cfg, mods: mods}
 	go srv.start()
 	initialized = true
 }

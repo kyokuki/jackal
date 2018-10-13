@@ -121,7 +121,9 @@ func main() {
 	defer router.Unset()
 
 	// initialize modules & components...
-	module.Initialize(&cfg.Modules)
+	mods := module.New(&cfg.Modules)
+	defer mods.Close()
+
 	component.Initialize(&cfg.Components)
 
 	// create PID file
@@ -141,10 +143,10 @@ func main() {
 	}
 
 	// start serving s2s...
-	s2s.Initialize(cfg.S2S)
+	s2s.Initialize(cfg.S2S, mods)
 
 	// start serving c2s...
-	c2s.Initialize(cfg.C2S)
+	c2s.Initialize(cfg.C2S, mods)
 }
 
 var debugSrv *http.Server

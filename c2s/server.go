@@ -17,6 +17,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/transport"
 )
 
@@ -24,6 +25,7 @@ var listenerProvider = net.Listen
 
 type server struct {
 	cfg        *Config
+	mods       *module.Modules
 	ln         net.Listener
 	wsSrv      *http.Server
 	wsUpgrader *websocket.Upgrader
@@ -117,7 +119,7 @@ func (s *server) startStream(tr transport.Transport) {
 		sasl:             s.cfg.SASL,
 		compression:      s.cfg.Compression,
 	}
-	newStream(s.nextID(), cfg)
+	newStream(s.nextID(), cfg, s.mods)
 }
 
 func (s *server) nextID() string {

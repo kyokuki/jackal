@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/transport"
 )
 
@@ -18,6 +19,7 @@ var listenerProvider = net.Listen
 
 type server struct {
 	cfg       *Config
+	mods      *module.Modules
 	ln        net.Listener
 	listening uint32
 }
@@ -65,5 +67,5 @@ func (s *server) startStream(tr transport.Transport) {
 		connectTimeout: s.cfg.ConnectTimeout,
 		maxStanzaSize:  s.cfg.MaxStanzaSize,
 		dialer:         newDialerCopy(defaultDialer),
-	})
+	}, s.mods)
 }

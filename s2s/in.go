@@ -30,6 +30,7 @@ const (
 type inStream struct {
 	id            string
 	cfg           *streamConfig
+	mods          *module.Modules
 	localDomain   string
 	remoteDomain  string
 	state         uint32
@@ -40,10 +41,11 @@ type inStream struct {
 	actorCh       chan func()
 }
 
-func newInStream(cfg *streamConfig) *inStream {
+func newInStream(config *streamConfig, mods *module.Modules) *inStream {
 	s := &inStream{
 		id:      nextInID(),
-		cfg:     cfg,
+		cfg:     config,
+		mods:    mods,
 		actorCh: make(chan func(), streamMailboxSize),
 	}
 	// register into stream container
@@ -52,8 +54,8 @@ func newInStream(cfg *streamConfig) *inStream {
 	// start s2s in session
 	s.restartSession()
 
-	if cfg.connectTimeout > 0 {
-		s.connectTm = time.AfterFunc(cfg.connectTimeout, s.connectTimeout)
+	if config.connectTimeout > 0 {
+		s.connectTm = time.AfterFunc(config.connectTimeout, s.connectTimeout)
 	}
 	go s.loop()
 	go s.doRead() // start reading transport...
@@ -184,8 +186,8 @@ func (s *inStream) handleConnected(elem xmpp.XElement) {
 		case xmpp.Stanza:
 			// process roster presence
 			if presence, ok := elem.(*xmpp.Presence); ok && presence.ToJID().IsBare() {
-				if r := module.Modules().Roster; r != nil {
-					module.Modules().Roster.ProcessPresence(presence)
+				if r := s.mods.Roster; r != nil {
+					s.mods.Roster.ProcessPresence(presence)
 				}
 				return
 			}

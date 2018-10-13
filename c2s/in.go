@@ -38,6 +38,7 @@ const (
 
 type inStream struct {
 	cfg            *streamConfig
+	mods           *module.Modules
 	sess           *session.Session
 	id             string
 	connectTm      *time.Timer
@@ -56,9 +57,10 @@ type inStream struct {
 	presence      *xmpp.Presence
 }
 
-func newStream(id string, cfg *streamConfig) stream.C2S {
+func newStream(id string, config *streamConfig, mods *module.Modules) stream.C2S {
 	s := &inStream{
-		cfg:        cfg,
+		cfg:        config,
+		mods:       mods,
 		id:         id,
 		ctx:        stream.NewContext(),
 		actorCh:    make(chan func(), streamMailboxSize),
@@ -67,7 +69,7 @@ func newStream(id string, cfg *streamConfig) stream.C2S {
 	inContainer.set(s)
 
 	// initialize stream context
-	secured := !(cfg.transport.Type() == transport.Socket)
+	secured := !(config.transport.Type() == transport.Socket)
 	s.setSecured(secured)
 	s.setJID(&jid.JID{})
 
@@ -77,8 +79,8 @@ func newStream(id string, cfg *streamConfig) stream.C2S {
 	// start c2s session
 	s.restartSession()
 
-	if cfg.connectTimeout > 0 {
-		s.connectTm = time.AfterFunc(cfg.connectTimeout, s.connectTimeout)
+	if config.connectTimeout > 0 {
+		s.connectTm = time.AfterFunc(config.connectTimeout, s.connectTimeout)
 	}
 	go s.loop()
 	go s.doRead() // start reading...
@@ -272,7 +274,7 @@ func (s *inStream) unauthenticatedFeatures() []xmpp.XElement {
 	// allow In-band registration over encrypted stream only
 	allowRegistration := s.IsSecured()
 
-	if reg := module.Modules().Register; reg != nil && allowRegistration {
+	if reg := s.mods.Register; reg != nil && allowRegistration {
 		registerFeature := xmpp.NewElementNamespace("register", "http://jabber.org/features/iq-register")
 		features = append(features, registerFeature)
 	}
@@ -301,7 +303,7 @@ func (s *inStream) authenticatedFeatures() []xmpp.XElement {
 	sessElem := xmpp.NewElementNamespace("session", "urn:ietf:params:xml:ns:xmpp-session")
 	features = append(features, sessElem)
 
-	if module.Modules().Roster != nil {
+	if s.mods.Roster != nil {
 		ver := xmpp.NewElementNamespace("ver", "urn:xmpp:features:rosterver")
 		features = append(features, ver)
 	}
@@ -318,7 +320,7 @@ func (s *inStream) handleConnected(elem xmpp.XElement) {
 
 	case "iq":
 		iq := elem.(*xmpp.IQ)
-		if reg := module.Modules().Register; reg != nil && reg.MatchesIQ(iq) {
+		if reg := s.mods.Register; reg != nil && reg.MatchesIQ(iq) {
 			if s.IsSecured() {
 				reg.ProcessIQ(iq, s)
 			} else {
@@ -378,7 +380,7 @@ func (s *inStream) handleAuthenticated(elem xmpp.XElement) {
 
 func (s *inStream) handleSessionStarted(elem xmpp.XElement) {
 	// reset ping timer deadline
-	if p := module.Modules().Ping; p != nil {
+	if p := s.mods.Ping; p != nil {
 		p.SchedulePing(s)
 	}
 	stanza, ok := elem.(xmpp.Stanza)
@@ -389,7 +391,7 @@ func (s *inStream) handleSessionStarted(elem xmpp.XElement) {
 	if comp := component.Get(stanza.ToJID().Domain()); comp != nil { // component stanza?
 		switch stanza := stanza.(type) {
 		case *xmpp.IQ:
-			if di := module.Modules().DiscoInfo; di != nil && di.MatchesIQ(stanza) {
+			if di := s.mods.DiscoInfo; di != nil && di.MatchesIQ(stanza) {
 				di.ProcessIQ(stanza, s)
 				return
 			}
@@ -582,7 +584,7 @@ func (s *inStream) startSession(iq *xmpp.IQ) {
 	s.writeElement(iq.ResultIQ())
 
 	// start pinging...
-	if p := module.Modules().Ping; p != nil {
+	if p := s.mods.Ping; p != nil {
 		p.SchedulePing(s)
 	}
 	s.setState(sessionStarted)
@@ -624,7 +626,7 @@ func (s *inStream) processIQ(iq *xmpp.IQ) {
 		}
 		return
 	}
-	module.ProcessIQ(iq, s)
+	s.mods.ProcessIQ(iq, s)
 }
 
 func (s *inStream) processPresence(presence *xmpp.Presence) {
@@ -639,12 +641,12 @@ func (s *inStream) processPresence(presence *xmpp.Presence) {
 		s.setPresence(presence)
 	}
 	// deliver presence to roster module
-	if r := module.Modules().Roster; r != nil {
+	if r := s.mods.Roster; r != nil {
 		r.ProcessPresence(presence)
 	}
 	// deliver offline messages
 	if replyOnBehalf && presence.IsAvailable() && presence.Priority() >= 0 {
-		if off := module.Modules().Offline; off != nil {
+		if off := s.mods.Offline; off != nil {
 			off.DeliverOfflineMessages(s)
 		}
 	}
@@ -663,7 +665,7 @@ sendMessage:
 		toJID = toJID.ToBareJID()
 		goto sendMessage
 	case router.ErrNotAuthenticated:
-		if off := module.Modules().Offline; off != nil {
+		if off := s.mods.Offline; off != nil {
 			off.ArchiveMessage(message)
 			return
 		}
@@ -776,12 +778,12 @@ func (s *inStream) disconnectWithStreamError(err *streamerror.Error) {
 
 func (s *inStream) disconnectClosingSession(closeSession, unbind bool) {
 	// stop pinging...
-	if p := module.Modules().Ping; p != nil {
+	if p := s.mods.Ping; p != nil {
 		p.CancelPing(s)
 	}
 	// send 'unavailable' presence when disconnecting
 	if presence := s.Presence(); presence != nil && presence.IsAvailable() {
-		if r := module.Modules().Roster; r != nil {
+		if r := s.mods.Roster; r != nil {
 			r.ProcessPresence(xmpp.NewPresence(s.JID(), s.JID().ToBareJID(), xmpp.UnavailableType))
 		}
 	}

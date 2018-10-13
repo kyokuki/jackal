@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module"
 	"github.com/pkg/errors"
 )
 
@@ -36,7 +37,7 @@ var (
 
 // Initialize initializes c2s sub system spawning a connection listener
 // for every server configuration.
-func Initialize(srvConfigurations []Config) {
+func Initialize(srvConfigurations []Config, mods *module.Modules) {
 	mu.Lock()
 	if initialized {
 		mu.Unlock()
@@ -48,7 +49,7 @@ func Initialize(srvConfigurations []Config) {
 	}
 	// initialize all servers
 	for i := 0; i < len(srvConfigurations); i++ {
-		if _, err := initializeServer(&srvConfigurations[i]); err != nil {
+		if _, err := initializeServer(&srvConfigurations[i], mods); err != nil {
 			log.Fatalf("%v", err)
 		}
 	}
@@ -79,8 +80,8 @@ func Shutdown() {
 	<-ch
 }
 
-func initializeServer(cfg *Config) (*server, error) {
-	srv := &server{cfg: cfg}
+func initializeServer(cfg *Config, mods *module.Modules) (*server, error) {
+	srv := &server{cfg: cfg, mods: mods}
 	servers[cfg.ID] = srv
 	go srv.start()
 	return srv, nil
