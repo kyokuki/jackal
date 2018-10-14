@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 
@@ -148,6 +149,10 @@ func main() {
 
 	// start serving c2s...
 	c2s.Initialize(cfg.C2S, mods, comps)
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	<-c
 }
 
 var debugSrv *http.Server

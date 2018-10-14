@@ -36,6 +36,20 @@ var (
 	initialized bool
 )
 
+type C2S struct {
+	mu      sync.RWMutex
+	servers map[string]*server
+}
+
+func New(configs []Config, mods *module.Modules, comps *component.Components) *C2S {
+	ss := &C2S{servers: make(map[string]*server)}
+	for _, config := range configs {
+		srv := &server{cfg: &config, mods: mods, comps: comps}
+		ss.servers[config.ID] = srv
+	}
+	return ss
+}
+
 // Initialize initializes c2s sub system spawning a connection listener
 // for every server configuration.
 func Initialize(srvConfigurations []Config, mods *module.Modules, comps *component.Components) {
