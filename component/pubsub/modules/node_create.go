@@ -21,7 +21,8 @@ func (s *NodeCreateModule) ModuleCriteria() *base.ElementCriteria {
 	eleCreate := &base.ElementCriteria{}
 	eleCreate.SetName("create")
 
-	eleCrit.AddCriteria(elePubsub).AddCriteria(eleCreate)
+	elePubsub.AddCriteria(eleCreate)
+	eleCrit.AddCriteria(elePubsub)
 	return eleCrit
 }
 

@@ -3,14 +3,18 @@ package base
 import "github.com/ortuman/jackal/xmpp"
 
 type Criteria interface {
+	Matches(element xmpp.XElement) bool
+}
 
+type OrElementCriteria struct {
+	crits []*ElementCriteria
 }
 
 type ElementCriteria struct {
 	attrs        map[string]string
 	name         string
 	cdata        string
-	nextCriteria *ElementCriteria
+	nextCriteria Criteria
 }
 
 func (ec *ElementCriteria) SetName(name string) *ElementCriteria {
@@ -31,11 +35,9 @@ func (ec *ElementCriteria) SetCDATA(cdata string) *ElementCriteria {
 	return ec
 }
 
-func (ec *ElementCriteria) AddCriteria(next *ElementCriteria) *ElementCriteria {
+func (ec *ElementCriteria) AddCriteria(next Criteria) *ElementCriteria {
 	if ec.nextCriteria == nil {
 		ec.nextCriteria = next
-	} else {
-		ec.nextCriteria.AddCriteria(next)
 	}
 	return ec
 }
@@ -71,5 +73,18 @@ func (ec *ElementCriteria) Matches(element xmpp.XElement) bool {
 		return result
 	}
 
+	return false
+}
+
+func (oec *OrElementCriteria) AddCriteria(next *ElementCriteria) {
+	oec.crits = append(oec.crits, next)
+}
+
+func (oec *OrElementCriteria) Matches(element xmpp.XElement) bool {
+	for _, item := range oec.crits {
+		if item.Matches(element) {
+			return true
+		}
+	}
 	return false
 }
