@@ -4,6 +4,8 @@ import (
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/component/pubsub/modules"
+	"fmt"
 )
 
 const mailboxSize = 2048
@@ -17,6 +19,8 @@ type PubSub struct {
 	discoInfo  *xep0030.DiscoInfo
 	actorCh    chan func()
 	shutdownCh <-chan struct{}
+
+	modules 	[]modules.AbstractModule
 }
 
 func New(cfg *Config, discoInfo *xep0030.DiscoInfo, shutdownCh <-chan struct{}) *PubSub {
@@ -26,9 +30,14 @@ func New(cfg *Config, discoInfo *xep0030.DiscoInfo, shutdownCh <-chan struct{}) 
 		actorCh:    make(chan func(), mailboxSize),
 		shutdownCh: shutdownCh,
 	}
+	c. initModules()
 	c.registerDiscoInfo()
 	go c.loop()
 	return c
+}
+
+func (c *PubSub)initModules()  {
+	c.modules = append(c.modules, &modules.NodeCreateModule{})
 }
 
 func (c *PubSub) Host() string {
@@ -55,42 +64,35 @@ func (c *PubSub) loop() {
 
 func (c *PubSub) processStanza(stanza xmpp.XElement, stm stream.C2S) {
 
-	switch stanza.(type) {
-	case *xmpp.IQ:
-		iq := stanza.(*xmpp.IQ)
-		c.processIQ(iq, stm)
-	case *xmpp.Message:
-		msg := stanza.(*xmpp.Message)
-		stm.SendElement(msg.BadRequestError())
-	case *xmpp.Presence:
-		prs := stanza.(*xmpp.Message)
-		stm.SendElement(prs.BadRequestError())
+	var hanlde bool
+	hanlde = c.process(stanza, stm)
+	if !hanlde {
+		switch stanza.(type) {
+		case *xmpp.IQ:
+			iq := stanza.(*xmpp.IQ)
+			stm.SendElement(iq.FeatureNotImplementedError())
+		case *xmpp.Message:
+			msg := stanza.(*xmpp.Message)
+			stm.SendElement(msg.FeatureNotImplementedError())
+		case *xmpp.Presence:
+			prs := stanza.(*xmpp.Message)
+			stm.SendElement(prs.FeatureNotImplementedError())
+		}
 	}
 }
 
-func (c *PubSub) processIQ(iq *xmpp.IQ, stm stream.C2S) {
-
-	if c.discoInfo != nil && c.discoInfo.MatchesIQ(iq) {
-		c.discoInfo.ProcessIQ(iq, stm)
-		return
+func (c *PubSub) process(stanza xmpp.XElement, stm stream.C2S) bool {
+	handled := false
+	for _, mod := range c.modules {
+		criteria := mod.ModuleCriteria()
+		if criteria != nil && criteria.Matches(stanza) {
+			handled = true
+			fmt.Println("Handled by module " + mod.Name())
+			mod.Process(stanza, stm)
+			fmt.Println("Finished " + mod.Name())
+		}
 	}
-
-	//q := iq.Elements().Child("query")
-	//node := q.Attributes().Get("node")
-	//if q != nil {
-	//	switch q.Namespace() {
-	//	case discoInfoNamespace:
-	//		di.sendDiscoInfo(prov, toJID, fromJID, node, iq, stm)
-	//		return
-	//	case discoItemsNamespace:
-	//		di.sendDiscoItems(prov, toJID, fromJID, node, iq, stm)
-	//		return
-	//	}
-	//}
-	//stm.SendElement(iq.BadRequestError())
-
-	elem :=iq.FeatureNotImplementedError()
-	stm.SendElement(elem)
+	return handled
 }
 
 

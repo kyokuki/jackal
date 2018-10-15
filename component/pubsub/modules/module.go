@@ -7,6 +7,7 @@ import (
 )
 
 type AbstractModule interface {
+	Name() string
 	ModuleCriteria() *base.ElementCriteria
 	Process(stanza xmpp.XElement, stm stream.C2S)
 }

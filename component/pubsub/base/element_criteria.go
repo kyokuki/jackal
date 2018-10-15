@@ -19,6 +19,9 @@ func (ec *ElementCriteria) SetName(name string) *ElementCriteria {
 }
 
 func (ec *ElementCriteria) AddAttr(attrName string, attrValue string) *ElementCriteria {
+	if ec.attrs == nil {
+		ec.attrs = make(map[string]string)
+	}
 	ec.attrs[attrName] = attrValue
 	return ec
 }

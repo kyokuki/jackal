@@ -15,11 +15,11 @@ type AbstractNodeConfig struct {
 	nodeName string
 }
 
-func (af *AbstractNodeConfig) Form() xep0004.DataForm {
+func (af *AbstractNodeConfig) Form() *xep0004.DataForm {
 	if !af.isInit {
 		af.init("default")
 	}
-	return af.form
+	return &af.form
 }
 
 func (af *AbstractNodeConfig) init(nodeName string) {

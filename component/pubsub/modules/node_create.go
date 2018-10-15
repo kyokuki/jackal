@@ -1,9 +1,16 @@
 package modules
 
-import "github.com/ortuman/jackal/component/pubsub/base"
+import (
+	"github.com/ortuman/jackal/component/pubsub/base"
+	"github.com/ortuman/jackal/stream"
+	"github.com/ortuman/jackal/xmpp"
+)
 
-type NodeCreateModule struct {
-	
+
+type NodeCreateModule struct {}
+
+func (s *NodeCreateModule)Name() string  {
+	return "NodeCreateModule"
 }
 
 func (s *NodeCreateModule) ModuleCriteria() *base.ElementCriteria {
@@ -16,4 +23,8 @@ func (s *NodeCreateModule) ModuleCriteria() *base.ElementCriteria {
 
 	eleCrit.AddCriteria(elePubsub).AddCriteria(eleCreate)
 	return eleCrit
+}
+
+func (s *NodeCreateModule)Process(stanza xmpp.XElement, stm stream.C2S)  {
+	
 }
