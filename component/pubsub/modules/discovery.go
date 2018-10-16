@@ -30,7 +30,8 @@ func (s *DiscoveryModule) ModuleCriteria() *base.ElementCriteria {
 	return eleCrit
 }
 
-func (s *DiscoveryModule) Process(stanza xmpp.XElement, stm stream.C2S) {
+func (s *DiscoveryModule) Process(stanza xmpp.Stanza, stm stream.C2S) *base.PubSubError {
+	var pubSubErr *base.PubSubError
 	fmt.Println(s.Name() + " process ")
 
 	query := stanza.Elements().Child("query")
@@ -43,22 +44,24 @@ func (s *DiscoveryModule) Process(stanza xmpp.XElement, stm stream.C2S) {
 		case *xmpp.IQ:
 			if di := module.Modules().DiscoInfo; di != nil && di.MatchesIQ(stanza) {
 				di.ProcessIQ(stanza, stm)
-				return
+				return nil
 			}
 		}
-		return
+		return nil
 	}
 
 	if xmlns == "http://jabber.org/protocol/disco#info" {
-		s.processDiscoInfo(stanza, stm)
+		pubSubErr = s.processDiscoInfo(stanza, stm)
 	}
 
 	if xmlns == "http://jabber.org/protocol/disco#items" {
-		s.processDiscoItems(stanza, stm)
+		pubSubErr = s.processDiscoItems(stanza, stm)
 	}
+
+	return pubSubErr
 }
 
-func (s *DiscoveryModule) processDiscoInfo(stanza xmpp.XElement, stm stream.C2S) {
+func (s *DiscoveryModule) processDiscoInfo(stanza xmpp.XElement, stm stream.C2S) *base.PubSubError {
 	stan := stanza.(xmpp.Stanza)
 	fromJID := stan.FromJID()
 	toJID := stan.ToJID()
@@ -70,9 +73,10 @@ func (s *DiscoveryModule) processDiscoInfo(stanza xmpp.XElement, stm stream.C2S)
 
 	resultIq.AppendElement(resultQuery)
 	stm.SendElement(resultIq)
+	return nil
 }
 
-func (s *DiscoveryModule) processDiscoItems(stanza xmpp.XElement, stm stream.C2S) {
+func (s *DiscoveryModule) processDiscoItems(stanza xmpp.XElement, stm stream.C2S) *base.PubSubError {
 	stan := stanza.(xmpp.Stanza)
 	fromJID := stan.FromJID()
 	toJID := stan.ToJID()
@@ -84,4 +88,5 @@ func (s *DiscoveryModule) processDiscoItems(stanza xmpp.XElement, stm stream.C2S
 
 	resultIq.AppendElement(resultQuery)
 	stm.SendElement(resultIq)
+	return nil
 }

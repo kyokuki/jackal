@@ -9,5 +9,5 @@ import (
 type AbstractModule interface {
 	Name() string
 	ModuleCriteria() *base.ElementCriteria
-	Process(stanza xmpp.XElement, stm stream.C2S)
+	Process(stanza xmpp.Stanza, stm stream.C2S) *base.PubSubError
 }

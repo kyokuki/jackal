@@ -63,7 +63,7 @@ func (c *PubSub) loop() {
 	}
 }
 
-func (c *PubSub) processStanza(stanza xmpp.XElement, stm stream.C2S) {
+func (c *PubSub) processStanza(stanza xmpp.Stanza, stm stream.C2S) {
 
 	var hanlde bool
 	hanlde = c.process(stanza, stm)
@@ -82,14 +82,17 @@ func (c *PubSub) processStanza(stanza xmpp.XElement, stm stream.C2S) {
 	}
 }
 
-func (c *PubSub) process(stanza xmpp.XElement, stm stream.C2S) bool {
+func (c *PubSub) process(stanza xmpp.Stanza, stm stream.C2S) bool {
 	handled := false
 	for _, mod := range c.modules {
 		criteria := mod.ModuleCriteria()
 		if criteria != nil && criteria.Matches(stanza) {
 			handled = true
 			fmt.Println("Handled by module " + mod.Name())
-			mod.Process(stanza, stm)
+			pubSubErr := mod.Process(stanza, stm)
+			if pubSubErr != nil {
+				stm.SendElement(pubSubErr.ErrorStanza())
+			}
 			fmt.Println("Finished " + mod.Name())
 		}
 	}

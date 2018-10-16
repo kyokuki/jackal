@@ -1,5 +1,17 @@
 package xep0004
 
+func (f *DataForm) SetField(variable, value string) {
+	if len(variable) == 0 && len(value) == 0 {
+		return
+	}
+	field := Field{
+		Var: variable,
+		Values: []string{value},
+	}
+
+	f.AddField(field)
+}
+
 func (f *DataForm) AddField(field Field) {
 	if len(field.Var) == 0 && len(field.Values) == 0 {
 		return
