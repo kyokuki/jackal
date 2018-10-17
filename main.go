@@ -45,6 +45,8 @@ Common Options:
     -v, --version          Show version
 `
 
+var GlobalJackalCfg Config
+
 func main() {
 	var configFile string
 	var showVersion bool
@@ -81,6 +83,9 @@ func main() {
 		logError(err)
 		return
 	}
+
+	GlobalJackalCfg = cfg
+
 	// initialize logger
 	var logFiles []io.WriteCloser
 	if len(cfg.Logger.LogPath) > 0 {
