@@ -1,11 +1,11 @@
 package sql
 
 import (
-	"github.com/ortuman/jackal/component/pubsub/storage"
 	"time"
 	"database/sql"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/component/pubsub/repository"
 )
 
 // Storage represents a SQL storage sub system.
@@ -19,7 +19,7 @@ func (s *Storage) tmpFuncNeverUse()  {
 }
 
 // New returns a SQL storage instance.
-func New(dsn string, poolSize int) storage.IPubSubDao {
+func New(dsn string, poolSize int) repository.IPubSubDao {
 	var err error
 	s := &Storage{
 		doneCh: make(chan chan bool),

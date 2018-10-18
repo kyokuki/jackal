@@ -9,30 +9,34 @@ const (
 	PUBSUB = "pubsub#"
 )
 
-type AbstractNodeConfig struct {
+type AbstractNodeConfig interface {
+	Form() *xep0004.DataForm
+}
+
+type abstractNodeConfig struct {
 	isInit   bool
 	form     xep0004.DataForm
 	nodeName string
 }
 
-func (af *AbstractNodeConfig) Form() *xep0004.DataForm {
+func (af *abstractNodeConfig) Form() *xep0004.DataForm {
 	if !af.isInit {
 		af.init("default")
 	}
 	return &af.form
 }
 
-func (af *AbstractNodeConfig) init(nodeName string) {
+func (af *abstractNodeConfig) init(nodeName string) {
 	af.nodeName = nodeName
 	af.initForm()
 	af.isInit = true
 }
 
-func (af *AbstractNodeConfig) initForm() {
+func (af *abstractNodeConfig) initForm() {
 	newField := xep0004.Field{}
 	af.form.AddField(xep0004.NewFieldHidden("FORM_TYPE", "http://jabber.org/protocol/pubsub#node_config"))
 
-	newField, _ = xep0004.NewFieldListSingle(PUBSUB+"node_type", "", "", []string{}, []string{enums.Leaf.String(), enums.Collection.String()})
+	newField, _ = xep0004.NewFieldListSingle(PUBSUB+"node_type", "leaf", "", []string{}, []string{enums.Leaf.String(), enums.Collection.String()})
 	af.form.AddField(newField)
 
 	af.form.AddField(xep0004.NewFieldTextSingle(PUBSUB+"title", "", "A friendly name for the node"))

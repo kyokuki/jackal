@@ -1,5 +1,7 @@
 package xep0004
 
+import "github.com/ortuman/jackal/xmpp"
+
 func (f *DataForm) SetField(variable, value string) {
 	if len(variable) == 0 && len(value) == 0 {
 		return
@@ -87,4 +89,25 @@ func (f *DataForm) Contains(variable string) bool {
 		}
 	}
 	return targetIndex >= 0
+}
+
+func (f *DataForm) CopyValuesFromDataForm(dataFrom *DataForm) {
+	for _, field := range dataFrom.Fields {
+		f.AddField(field)
+	}
+}
+
+func (f *DataForm) CopyValuesFromElementForm(elem xmpp.XElement) {
+	for _, itemElem := range elem.Elements().All() {
+		switch itemElem.Name() {
+		case "field":
+			sub, ok := itemElem.(*xmpp.Element)
+			if ok {
+				field, err := NewFieldFromElement(sub)
+				if err == nil {
+					f.AddField(*field)
+				}
+			}
+		}
+	}
 }

@@ -6,19 +6,19 @@ import (
 )
 
 type LeafNodeConfig struct {
-	AbstractNodeConfig
+	abstractNodeConfig
 }
 
 type CollectionNodeConfig struct {
-	AbstractNodeConfig
+	abstractNodeConfig
 }
 
 type DefaultNodeConfig struct {
 	LeafNodeConfig
 } 
 
-func NewLeafNodeConfig(nodeName string) LeafNodeConfig {
-	lf := LeafNodeConfig{}
+func NewLeafNodeConfig(nodeName string) *LeafNodeConfig {
+	lf := &LeafNodeConfig{}
 	lf.init(nodeName)
 	return lf
 }
@@ -53,8 +53,8 @@ func (lf *LeafNodeConfig) MaxItems() int {
 	return  ret
 }
 
-func NewCollectionNodeConfig(nodeName string) CollectionNodeConfig {
-	cf := CollectionNodeConfig{}
+func NewCollectionNodeConfig(nodeName string) *CollectionNodeConfig {
+	cf := &CollectionNodeConfig{}
 	cf.init(nodeName)
 	cf.form.AddField(xep0004.NewFieldTextMulti("pubsub#children", []string{""}, ""))
 	return cf
@@ -67,8 +67,8 @@ func (cf *CollectionNodeConfig) SetChildren(children []string) {
 	})
 }
 
-func NewDefaultNodeConfig(nodeName string) DefaultNodeConfig {
-	df := DefaultNodeConfig{}
+func NewDefaultNodeConfig(nodeName string) *DefaultNodeConfig {
+	df := &DefaultNodeConfig{}
 	df.init(nodeName)
 	df.form.AddField(xep0004.NewFieldTextMulti("pubsub#children", []string{""}, ""))
 	return df

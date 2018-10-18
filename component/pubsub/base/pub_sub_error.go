@@ -6,12 +6,9 @@ type PubSubError struct {
 	errorStanza xmpp.Stanza
 }
 
-func NewPubSubError(stanza xmpp.Stanza) *PubSubError {
-	if stanza == nil {
-		return nil
-	}
+func NewPubSubErrorStanza(stanza xmpp.Stanza, stanzaErr *xmpp.StanzaError, errorElements []xmpp.XElement) *PubSubError {
 	s := &PubSubError{
-		errorStanza: stanza,
+		errorStanza: xmpp.NewErrorStanzaFromStanza(stanza, stanzaErr, errorElements),
 	}
 	return s
 }

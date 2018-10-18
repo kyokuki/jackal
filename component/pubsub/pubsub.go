@@ -37,8 +37,9 @@ func New(cfg *Config, discoInfo *xep0030.DiscoInfo, shutdownCh <-chan struct{}) 
 }
 
 func (c *PubSub)initModules()  {
-	c.modules = append(c.modules, &modules.NodeCreateModule{})
 	c.modules = append(c.modules, &modules.DiscoveryModule{})
+	c.modules = append(c.modules, &modules.NodeCreateModule{})
+	c.modules = append(c.modules, &modules.NodeConfigModule{})
 }
 
 func (c *PubSub) Host() string {

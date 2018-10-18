@@ -3,12 +3,13 @@ package storage
 import (
 	"fmt"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/component/pubsub/storage/sql"
+	"github.com/ortuman/jackal/component/pubsub/repository/storage/sql"
 )
 
 
 type IPubSubDao interface {
 	tmpFuncNeverUse()
+	GetNodeConfig(serviceJid string, nodeName string) (string, error)
 }
 
 var (
