@@ -82,8 +82,10 @@ func (s *NodeConfigModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 
 	if "set" == stanzaType {
 		s.parseConf(nodeConfig, configure)
-		// TODO collection node
-		// update child nodes
+
+		// TODO
+		// collection node should update its child nodes
+
 		repository.Repository().UpdateNodeConfig(*toJID, nodeName, nodeConfig)
 	}
 
@@ -94,12 +96,13 @@ func (s *NodeConfigModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 
 func (s *NodeConfigModule) parseConf(nodeConfig base.AbstractNodeConfig, configure xmpp.XElement) error {
 	elementX := configure.Elements().ChildNamespace("x", "jabber:x:data")
-	foo, err := xep0004.NewFormFromElement(elementX)
-	if err != nil {
-		return err
-	}
 
 	if elementX != nil && "submit" == elementX.Attributes().Get("type") {
+		foo, err := xep0004.NewFormFromElement(elementX)
+		if err != nil {
+			return err
+		}
+
 		for _, itemField := range foo.Fields {
 			variable := itemField.Var
 
