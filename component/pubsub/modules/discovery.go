@@ -6,6 +6,8 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 	"fmt"
 	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/xmpp/jid"
+	"github.com/ortuman/jackal/module/xep0030"
 )
 
 type DiscoveryModule struct{}
@@ -28,6 +30,11 @@ func (s *DiscoveryModule) ModuleCriteria() *base.ElementCriteria {
 
 	eleCrit.AddCriteria(eleQuery)
 	return eleCrit
+}
+
+func (s *DiscoveryModule) Features(toJID, fromJID *jid.JID, node string) ([]xep0030.Feature, *xmpp.StanzaError) {
+	return []xep0030.Feature{
+	}, nil
 }
 
 func (s *DiscoveryModule) Process(stanza xmpp.Stanza, stm stream.C2S) *base.PubSubError {

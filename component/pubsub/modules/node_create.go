@@ -8,6 +8,8 @@ import (
 	"strings"
 	"github.com/ortuman/jackal-ff/component/pubsub/enums"
 	"github.com/ortuman/jackal/component/pubsub/repository"
+	"github.com/ortuman/jackal/xmpp/jid"
+	"github.com/ortuman/jackal/module/xep0030"
 )
 
 
@@ -29,6 +31,15 @@ func (s *NodeCreateModule) ModuleCriteria() *base.ElementCriteria {
 	eleCrit.AddCriteria(elePubsub)
 	return eleCrit
 }
+
+func (s *NodeCreateModule) Features(toJID, fromJID *jid.JID, node string) ([]xep0030.Feature, *xmpp.StanzaError) {
+	return []xep0030.Feature{
+		"http://jabber.org/protocol/pubsub#create-nodes",
+		"http://jabber.org/protocol/pubsub#instant-nodes",
+		"http://jabber.org/protocol/pubsub#create-and-configure",
+	}, nil
+}
+
 
 func (s *NodeCreateModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubSubError  {
 	fromJID := packet.FromJID()
@@ -86,9 +97,9 @@ func (s *NodeCreateModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 
 				if "pubsub#node_type" == variable {
 					if val == enums.Collection.String() {
-						nodeType = enums.Leaf
-					} else {
 						nodeType = enums.Collection
+					} else {
+						nodeType = enums.Leaf
 					}
 				}
 
@@ -102,7 +113,15 @@ func (s *NodeCreateModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 
 	// currently not suport Collection Feature
 	if nodeType == enums.Collection {
-		return base.NewPubSubErrorStanza(packet, xmpp.ErrFeatureNotImplemented, nil)
+		unsupported1 := xmpp.NewElementNamespace("unsupported", "http://jabber.org/protocol/pubsub#errors")
+		unsupported1.SetAttribute("feature", "collections")
+		unsupported2 := xmpp.NewElementNamespace("unsupported", "http://jabber.org/protocol/pubsub#errors")
+		unsupported2.SetAttribute("feature", "multi-collection")
+		return base.NewPubSubErrorStanza(packet, xmpp.ErrFeatureNotImplemented,
+			[]xmpp.XElement{
+				unsupported1,
+				unsupported2,
+			})
 	}
 
 	if nodeType != enums.Leaf && nodeType != enums.Collection {

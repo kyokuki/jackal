@@ -6,6 +6,9 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/component/pubsub/repository"
 	"github.com/ortuman/jackal/module/xep0004"
+	"github.com/ortuman/jackal/xmpp/jid"
+	"github.com/ortuman/jackal/module/xep0030"
+	"github.com/ortuman/jackal-ff/component/pubsub/enums"
 )
 
 
@@ -26,6 +29,12 @@ func (s *NodeConfigModule) ModuleCriteria() *base.ElementCriteria {
 	elePubsub.AddCriteria(eleCreate)
 	eleCrit.AddCriteria(elePubsub)
 	return eleCrit
+}
+
+func (s *NodeConfigModule) Features(toJID, fromJID *jid.JID, node string) ([]xep0030.Feature, *xmpp.StanzaError) {
+	return []xep0030.Feature{
+		"http://jabber.org/protocol/pubsub#config-node",
+	}, nil
 }
 
 func (s *NodeConfigModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubSubError  {
@@ -81,6 +90,44 @@ func (s *NodeConfigModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 	}
 
 	if "set" == stanzaType {
+		if configure != nil {
+			elementX := configure.Elements().ChildNamespace("x", "jabber:x:data")
+			nodeType := enums.Leaf
+			if elementX != nil && "submit" == elementX.Attributes().Get("type") {
+				for _, elementField := range elementX.Elements().All() {
+					if elementField.Name() != "field" {
+						continue
+					}
+
+					variable := elementField.Attributes().Get("var")
+					val := ""
+					elementValue := elementField.Elements().Child("value")
+					if elementValue != nil {
+						val = elementValue.Text()
+					}
+
+					if "pubsub#node_type" == variable {
+						if val == enums.Collection.String() {
+							nodeType = enums.Collection
+						} else {
+							nodeType = enums.Leaf
+						}
+					}
+				}
+			}
+			if nodeType == enums.Collection {
+				unsupported1 := xmpp.NewElementNamespace("unsupported", "http://jabber.org/protocol/pubsub#errors")
+				unsupported1.SetAttribute("feature", "collections")
+				unsupported2 := xmpp.NewElementNamespace("unsupported", "http://jabber.org/protocol/pubsub#errors")
+				unsupported2.SetAttribute("feature", "multi-collection")
+				return base.NewPubSubErrorStanza(packet, xmpp.ErrFeatureNotImplemented,
+					[]xmpp.XElement{
+						unsupported1,
+						unsupported2,
+					})
+			}
+		}
+
 		s.parseConf(nodeConfig, configure)
 
 		// TODO
