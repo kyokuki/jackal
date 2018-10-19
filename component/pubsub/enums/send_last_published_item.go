@@ -1,13 +1,13 @@
 package enums
 
-type sendLastPublishedItemType string
+type SendLastPublishedItemType string
 
 const (
-	SendLastPublishedItem_never               = sendLastPublishedItemType("Never")
-	SendLastPublishedItem_on_sub              = sendLastPublishedItemType("When a new subscription is processed")
-	SendLastPublishedItem_on_sub_and_presence = sendLastPublishedItemType("When a new subscription is processed and whenever a subscriber comes online")
+	SendLastPublishedItem_never               = SendLastPublishedItemType("Never")
+	SendLastPublishedItem_on_sub              = SendLastPublishedItemType("When a new subscription is processed")
+	SendLastPublishedItem_on_sub_and_presence = SendLastPublishedItemType("When a new subscription is processed and whenever a subscriber comes online")
 )
 
-func (x sendLastPublishedItemType) String() string {
+func (x SendLastPublishedItemType) String() string {
 	return string(x)
 }

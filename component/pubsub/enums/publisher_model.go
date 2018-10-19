@@ -1,13 +1,13 @@
 package enums
 
-type publisherModelType string
+type PublisherModelType string
 
 const (
-	PublisherModelOpen        = publisherModelType("open")
-	PublisherModelPublishers  = publisherModelType("publishers")
-	PublisherModelSubscribers = publisherModelType("subscribers")
+	PublisherModelOpen        = PublisherModelType("open")
+	PublisherModelPublishers  = PublisherModelType("publishers")
+	PublisherModelSubscribers = PublisherModelType("subscribers")
 )
 
-func (x publisherModelType) String() string {
+func (x PublisherModelType) String() string {
 	return string(x)
 }

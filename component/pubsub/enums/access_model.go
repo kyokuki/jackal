@@ -1,15 +1,15 @@
 package enums
 
-type accessModelType string
+type AccessModelType string
 
 const (
-	AccessModelAuthorize = accessModelType("authorize")
-	AccessModelOpen      = accessModelType("open")
-	AccessModelPresence  = accessModelType("presence")
-	AccessModelRoster    = accessModelType("roster")
-	AccessModelWhitelist = accessModelType("whitelist")
+	AccessModelAuthorize = AccessModelType("authorize")
+	AccessModelOpen      = AccessModelType("open")
+	AccessModelPresence  = AccessModelType("presence")
+	AccessModelRoster    = AccessModelType("roster")
+	AccessModelWhitelist = AccessModelType("whitelist")
 )
 
-func (x accessModelType) String() string {
+func (x AccessModelType) String() string {
 	return string(x)
 }

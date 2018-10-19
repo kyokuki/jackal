@@ -1,13 +1,13 @@
 package enums
 
-type affiliationType string
+type AffiliationType string
 
 const (
-	AffiliationOwner   = affiliationType("owner")
-	AffiliationAdmin   = affiliationType("admin")
-	AffiliationMember  = affiliationType("member")
-	AffiliationNone    = affiliationType("none")
-	AffiliationOutcast = affiliationType("outcast")
+	AffiliationOwner   = AffiliationType("owner")
+	AffiliationAdmin   = AffiliationType("admin")
+	AffiliationMember  = AffiliationType("member")
+	AffiliationNone    = AffiliationType("none")
+	AffiliationOutcast = AffiliationType("outcast")
 )
 
 type affiliationPrivileges struct {
@@ -59,7 +59,7 @@ func newAffiliationPrivileges(
 	return x
 }
 
-func (x affiliationType) privileges() affiliationPrivileges {
+func (x AffiliationType) privileges() affiliationPrivileges {
 	switch x {
 	case AffiliationAdmin:
 		return affiliations.admin
@@ -75,38 +75,38 @@ func (x affiliationType) privileges() affiliationPrivileges {
 	return affiliations.none
 }
 
-func (x affiliationType) Weight() int {
+func (x AffiliationType) Weight() int {
 	return x.privileges().weight
 }
 
-func (x affiliationType) IsSubscribe() bool {
+func (x AffiliationType) IsSubscribe() bool {
 	return x.privileges().subscribe
 }
 
-func (x affiliationType) IsRetrieveItem() bool {
+func (x AffiliationType) IsRetrieveItem() bool {
 	return x.privileges().retrieveItem
 }
 
-func (x affiliationType) IsPurgeNode() bool {
+func (x AffiliationType) IsPurgeNode() bool {
 	return x.privileges().purgeNode
 }
 
-func (x affiliationType) IsPublishItem() bool {
+func (x AffiliationType) IsPublishItem() bool {
 	return x.privileges().publishItem
 }
 
-func (x affiliationType) IsDeleteNode() bool {
+func (x AffiliationType) IsDeleteNode() bool {
 	return x.privileges().deleteNode
 }
 
-func (x affiliationType) IsDeleteItem() bool {
+func (x AffiliationType) IsDeleteItem() bool {
 	return x.privileges().deleteItem
 }
 
-func (x affiliationType) IsConfigureNode() bool {
+func (x AffiliationType) IsConfigureNode() bool {
 	return x.privileges().configureNode
 }
 
-func (x affiliationType) String() string {
+func (x AffiliationType) String() string {
 	return string(x)
 }

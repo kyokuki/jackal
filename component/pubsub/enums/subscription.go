@@ -1,14 +1,14 @@
 package enums
 
-type subscriptionType string
+type SubscriptionType string
 
 const (
-	SubscriptionNone = subscriptionType("none")
-	SubscriptionPending = subscriptionType("pending")
-	SubscriptionSubscribed = subscriptionType("subscribed")
-	SubscriptionUnconfigured = subscriptionType("unconfigured")
+	SubscriptionNone = SubscriptionType("none")
+	SubscriptionPending = SubscriptionType("pending")
+	SubscriptionSubscribed = SubscriptionType("subscribed")
+	SubscriptionUnconfigured = SubscriptionType("unconfigured")
 )
 
-func (x subscriptionType) String() string {
+func (x SubscriptionType) String() string {
 	return string(x)
 }

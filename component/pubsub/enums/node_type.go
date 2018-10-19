@@ -1,12 +1,12 @@
 package enums
 
-type nodeType string
+type NodeType string
 
 const (
-	Collection = nodeType("collection")
-	Leaf       = nodeType("leaf")
+	Collection = NodeType("collection")
+	Leaf       = NodeType("leaf")
 )
 
-func (x nodeType) String() string {
+func (x NodeType) String() string {
 	return string(x)
 }
