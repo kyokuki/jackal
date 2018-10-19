@@ -30,7 +30,7 @@ func (ns *NodeSubscriptions) GetSubscriptions() []stateless.UsersSubscription{
 	return userSubs
 }
 
-func (ns *NodeSubscriptions) AddSubscription(bareJid jid.JID, sub enums.SubscriptionType) {
+func (ns *NodeSubscriptions) AddSubscriberJid(bareJid jid.JID, sub enums.SubscriptionType) {
 	ns.mutex.Lock()
 	defer ns.mutex.Unlock()
 	u1 := uuid.Must(uuid.NewV1())

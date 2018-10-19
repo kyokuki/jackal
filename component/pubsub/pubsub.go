@@ -40,6 +40,7 @@ func (c *PubSub)initModules()  {
 	c.modules = append(c.modules, &modules.DiscoveryModule{})
 	c.modules = append(c.modules, &modules.NodeCreateModule{})
 	c.modules = append(c.modules, &modules.NodeConfigModule{})
+	c.modules = append(c.modules, &modules.NodeDeleteModule{})
 }
 
 func (c *PubSub) Host() string {

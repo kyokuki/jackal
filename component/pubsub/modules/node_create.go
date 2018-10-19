@@ -6,16 +6,15 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/satori/go.uuid"
 	"strings"
-	"github.com/ortuman/jackal-ff/component/pubsub/enums"
+	"github.com/ortuman/jackal/component/pubsub/enums"
 	"github.com/ortuman/jackal/component/pubsub/repository"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/ortuman/jackal/module/xep0030"
 )
 
+type NodeCreateModule struct{}
 
-type NodeCreateModule struct {}
-
-func (s *NodeCreateModule)Name() string  {
+func (s *NodeCreateModule) Name() string {
 	return "NodeCreateModule"
 }
 
@@ -40,8 +39,7 @@ func (s *NodeCreateModule) Features(toJID, fromJID *jid.JID, node string) ([]xep
 	}, nil
 }
 
-
-func (s *NodeCreateModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubSubError  {
+func (s *NodeCreateModule) Process(packet xmpp.Stanza, stm stream.C2S) *base.PubSubError {
 	fromJID := packet.FromJID()
 	toJID := packet.ToJID().ToBareJID()
 	pubsub := packet.Elements().ChildNamespace("pubsub", "http://jabber.org/protocol/pubsub")
@@ -77,7 +75,6 @@ func (s *NodeCreateModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 	nodeType := enums.Leaf
 	collection := ""
 
-
 	nodeConfig = base.NewLeafNodeConfig(nodeName)
 	if configure != nil {
 		elementX := configure.Elements().ChildNamespace("x", "jabber:x:data")
@@ -111,7 +108,7 @@ func (s *NodeCreateModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 		}
 	}
 
-	// currently not suport Collection Feature
+	// TODO currently not suport Collection Feature
 	if nodeType == enums.Collection {
 		unsupported1 := xmpp.NewElementNamespace("unsupported", "http://jabber.org/protocol/pubsub#errors")
 		unsupported1.SetAttribute("feature", "collections")
@@ -128,13 +125,23 @@ func (s *NodeCreateModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 		return base.NewPubSubErrorStanza(packet, xmpp.ErrNotAllowed, nil)
 	}
 
-	// TODO
-	// get Node Subscriptions
-	// get Node Affiliations
-	// subscribe if auto-subscribe
-	// update Subscriptions and Affiliations
 	repository.Repository().CreateNode(*toJID, nodeName, *fromJID.ToBareJID(), nodeConfig, nodeType.String(), collection)
 
+	tmpNodeSubscriptions := repository.Repository().GetNodeSubscriptions(*toJID, nodeName)
+	tmpNodeAffiliations := repository.Repository().GetNodeAffiliations(*toJID, nodeName)
+
+	// TODO check configure AutoSubscribeNodeCreator, then subscribe
+	if true {
+		if tmpNodeSubscriptions != nil {
+			tmpNodeSubscriptions.AddSubscriberJid(*fromJID, enums.SubscriptionSubscribed)
+		}
+	}
+	if tmpNodeAffiliations != nil {
+		tmpNodeAffiliations.AddAffiliation(*fromJID.ToBareJID(), enums.AffiliationOwner)
+	}
+
+	repository.Repository().UpdateNodeAffiliations(*toJID, nodeName, tmpNodeAffiliations)
+	repository.Repository().UpdateNodeSubscriptions(*toJID, nodeName, tmpNodeSubscriptions)
 
 	if instantNode {
 		ps := xmpp.NewElementNamespace("pubsub", "http://jabber.org/protocol/pubsub")

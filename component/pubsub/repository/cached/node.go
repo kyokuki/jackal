@@ -18,7 +18,7 @@ type Node struct {
 	Name              string
 	ServiceJid        jid.JID
 	NodeConfig        base.AbstractNodeConfig
-
+	deleted           bool
 	nodeAffiliations  *NodeAffiliations
 	nodeSubscriptions *NodeSubscriptions
 }
@@ -51,4 +51,12 @@ func (nd *Node) GetNodeAffiliations() *NodeAffiliations {
 
 func (nd *Node) GetNodeSubscriptions() *NodeSubscriptions {
 	return nd.nodeSubscriptions
+}
+
+func (nd *Node) SetDeleted()  {
+	nd.deleted = true
+}
+
+func (nd *Node) IsDeleted() bool {
+	return nd.deleted
 }

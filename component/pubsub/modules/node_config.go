@@ -8,7 +8,7 @@ import (
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/ortuman/jackal/module/xep0030"
-	"github.com/ortuman/jackal-ff/component/pubsub/enums"
+	"github.com/ortuman/jackal/component/pubsub/enums"
 )
 
 
@@ -66,11 +66,16 @@ func (s *NodeConfigModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 	}
 
 
-	// TODO
-	// get affiation, and check if has the privileges : owner or admin
-	// if not then error
-	if false {
-		return base.NewPubSubErrorStanza(packet, xmpp.ErrForbidden, nil)
+
+	tmpNodeAffiliations := repository.Repository().GetNodeAffiliations(*toJID, nodeName)
+	// TODO when jid is admin, do not check privileges
+	if !false {
+		if tmpNodeAffiliations != nil {
+			senderAffiliation := tmpNodeAffiliations.GetSubscriberAffiliation(*fromJID)
+			if senderAffiliation.GetAffiliation() != enums.AffiliationOwner {
+				return base.NewPubSubErrorStanza(packet, xmpp.ErrForbidden, nil)
+			}
+		}
 	}
 
 	if "get" != stanzaType && "set" != stanzaType {
@@ -134,8 +139,14 @@ func (s *NodeConfigModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 		// collection node should update its child nodes
 
 		repository.Repository().UpdateNodeConfig(*toJID, nodeName, nodeConfig)
-	}
 
+		// TODO [pubsub#notify_config]
+		//_, notify_config := nodeConfig.Form().Field("pubsub#notify_config")
+		//if len(notify_config.Values) > 0 && notify_config.Values[0] == "1" {
+		//
+		//}
+
+	}
 
 	stm.SendElement(resultStanza)
 	return nil
