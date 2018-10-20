@@ -18,13 +18,16 @@ type Node struct {
 	Name              string
 	ServiceJid        jid.JID
 	NodeConfig        base.AbstractNodeConfig
+
+	nodeId			int64
 	deleted           bool
 	nodeAffiliations  *NodeAffiliations
 	nodeSubscriptions *NodeSubscriptions
 }
 
-func NewNode(serviceJid jid.JID, nodeName string, ownerJid jid.JID, nodeConfig base.AbstractNodeConfig, date time.Time) Node {
+func NewNode(nodeId int64, serviceJid jid.JID, nodeName string, ownerJid jid.JID, nodeConfig base.AbstractNodeConfig, date time.Time) Node {
 	node := Node{
+		nodeId:     nodeId,
 		Date:       date,
 		Name:       nodeName,
 		ServiceJid: serviceJid,

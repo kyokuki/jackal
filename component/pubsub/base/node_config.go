@@ -33,6 +33,8 @@ func (af *abstractNodeConfig) init(nodeName string) {
 }
 
 func (af *abstractNodeConfig) initForm() {
+	af.form.Type = xep0004.Form
+
 	newField := xep0004.Field{}
 	af.form.AddField(xep0004.NewFieldHidden("FORM_TYPE", "http://jabber.org/protocol/pubsub#node_config"))
 

@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/component/pubsub/repository"
+	"crypto/sha1"
+	"fmt"
+	"github.com/ortuman/jackal/component/pubsub/repository/storage/interface"
 )
 
 // Storage represents a SQL storage sub system.
@@ -14,12 +16,8 @@ type Storage struct {
 	doneCh chan chan bool
 }
 
-func (s *Storage) tmpFuncNeverUse()  {
-	
-}
-
 // New returns a SQL storage instance.
-func New(dsn string, poolSize int) repository.IPubSubDao {
+func New(dsn string, poolSize int) _interface.IPubSubDao {
 	var err error
 	s := &Storage{
 		doneCh: make(chan chan bool),
@@ -87,6 +85,12 @@ func (s *Storage) inTransaction(f func(tx *sql.Tx) error) error {
 	}
 	tx.Commit()
 	return nil
+}
+
+func (s *Storage) Sha1(str string) string {
+	sum := sha1.Sum([]byte(str))
+	ret := fmt.Sprintf("%x", sum)
+	return ret
 }
 
 

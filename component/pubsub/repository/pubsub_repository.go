@@ -6,11 +6,13 @@ import (
 	"time"
 	"github.com/ortuman/jackal/component/pubsub/repository/cached"
 	"fmt"
+	"github.com/ortuman/jackal/component/pubsub/repository/storage/interface"
+	"github.com/ortuman/jackal/component/pubsub/repository/storage"
 )
 
 type pubSubRepository struct {
 	nodes map[cached.NodeKey]*cached.Node
-
+	dao _interface.IPubSubDao
 	nodesAdded int64
 }
 
@@ -18,6 +20,11 @@ var instancePubSubRepository pubSubRepository
 
 func init()  {
 	instancePubSubRepository.nodes = make(map[cached.NodeKey]*cached.Node)
+}
+
+func Init(mysql string) {
+	storage.InitStorage(mysql)
+	instancePubSubRepository.dao = storage.Instance()
 }
 
 func Repository() *pubSubRepository {
@@ -37,14 +44,24 @@ func (ps *pubSubRepository) CreateNode(
 		// err : Parent collection does not exists yet!
 
 
-		// TODO
+
 		// 2. create node in DB
 		// err : Creating node failed!
+		intNodeType := 2
+		if nodeType != "collection" {
+			intNodeType = 1
+		}
+		retNodeId, err := ps.dao.CreateNode(bareJid, nodeName, ownerJid, nodeConfig, intNodeType, collection)
+		if err != nil {
+			return err
+		}
 
-		// TODO
-		// 3. new Node instance, and save it in nodes Map
+		retNodeId2 := ps.dao.GetNodeId(bareJid, nodeName)
+		if retNodeId2 < 0 {
+			return fmt.Errorf("Creating node failed!")
+		}
 
-		node := cached.NewNode(bareJid, nodeName, ownerJid, nodeConfig, time.Now())
+		node := cached.NewNode(retNodeId, bareJid, nodeName, ownerJid, nodeConfig, time.Now())
 		nodeKey := cached.NewNodeKey(bareJid.ToBareJID().String(), nodeName)
 		ps.nodes[nodeKey] = &node
 

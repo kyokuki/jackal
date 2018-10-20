@@ -6,6 +6,7 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/component/pubsub/modules"
 	"fmt"
+	"github.com/ortuman/jackal/component/pubsub/repository"
 )
 
 const mailboxSize = 2048
@@ -31,6 +32,7 @@ func New(cfg *Config, discoInfo *xep0030.DiscoInfo, shutdownCh <-chan struct{}) 
 		shutdownCh: shutdownCh,
 	}
 	c. initModules()
+	repository.Init(cfg.Mysql)
 	c.registerDiscoInfo()
 	go c.loop()
 	return c
