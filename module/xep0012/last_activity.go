@@ -25,14 +25,16 @@ const lastActivityNamespace = "jabber:iq:last"
 
 // LastActivity represents a last activity stream module.
 type LastActivity struct {
+	router     *router.Router
 	startTime  time.Time
 	actorCh    chan func()
 	shutdownCh <-chan struct{}
 }
 
 // New returns a last activity IQ handler module.
-func New(disco *xep0030.DiscoInfo, shutdownCh <-chan struct{}) *LastActivity {
+func New(disco *xep0030.DiscoInfo, router *router.Router, shutdownCh <-chan struct{}) *LastActivity {
 	x := &LastActivity{
+		router:     router,
 		startTime:  time.Now(),
 		actorCh:    make(chan func(), mailboxSize),
 		shutdownCh: shutdownCh,
@@ -97,7 +99,7 @@ func (x *LastActivity) sendServerUptime(iq *xmpp.IQ, stm stream.C2S) {
 }
 
 func (x *LastActivity) sendUserLastActivity(iq *xmpp.IQ, to *jid.JID, stm stream.C2S) {
-	if len(router.UserStreams(to.Node())) > 0 { // user is online
+	if len(x.router.UserStreams(to.Node())) > 0 { // user is online
 		x.sendReply(iq, 0, "", stm)
 		return
 	}

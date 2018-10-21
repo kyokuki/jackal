@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/errors"
-	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
@@ -30,6 +29,7 @@ const (
 type inStream struct {
 	id            string
 	cfg           *streamConfig
+	router        *router.Router
 	mods          *module.Modules
 	localDomain   string
 	remoteDomain  string
@@ -41,16 +41,14 @@ type inStream struct {
 	actorCh       chan func()
 }
 
-func newInStream(config *streamConfig, mods *module.Modules) *inStream {
+func newInStream(config *streamConfig, mods *module.Modules, router *router.Router) *inStream {
 	s := &inStream{
 		id:      nextInID(),
 		cfg:     config,
+		router:  router,
 		mods:    mods,
 		actorCh: make(chan func(), streamMailboxSize),
 	}
-	// register into stream container
-	inContainer.set(s)
-
 	// start s2s in session
 	s.restartSession()
 
@@ -191,7 +189,7 @@ func (s *inStream) handleConnected(elem xmpp.XElement) {
 				}
 				return
 			}
-			router.Route(elem)
+			s.router.Route(elem)
 		}
 	}
 }
@@ -210,7 +208,7 @@ func (s *inStream) proceedStartTLS(elem xmpp.XElement) {
 	s.cfg.transport.StartTLS(&tls.Config{
 		ServerName:   s.localDomain,
 		ClientAuth:   tls.VerifyClientCertIfGiven,
-		Certificates: host.Certificates(),
+		Certificates: s.router.Certificates(),
 	}, false)
 	atomic.StoreUint32(&s.secured, 1)
 
@@ -262,7 +260,7 @@ func (s *inStream) failAuthentication(reason, text string) {
 }
 
 func (s *inStream) authorizeDialbackKey(elem xmpp.XElement) {
-	if !host.IsLocalHost(elem.To()) {
+	if !s.router.IsLocalHost(elem.To()) {
 		s.writeStanzaErrorResponse(elem, xmpp.ErrItemNotFound)
 		return
 	}
@@ -282,7 +280,7 @@ func (s *inStream) authorizeDialbackKey(elem xmpp.XElement) {
 	dbVerify.SetText(elem.Text())
 	outCfg.dbVerify = dbVerify
 
-	outStm := newOutStream()
+	outStm := newOutStream(s.router)
 	outStm.start(outCfg)
 
 	// wait remote server verification
@@ -309,7 +307,7 @@ func (s *inStream) authorizeDialbackKey(elem xmpp.XElement) {
 }
 
 func (s *inStream) verifyDialbackKey(elem xmpp.XElement) {
-	if !host.IsLocalHost(elem.To()) {
+	if !s.router.IsLocalHost(elem.To()) {
 		s.writeStanzaErrorResponse(elem, xmpp.ErrItemNotFound)
 		return
 	}
@@ -394,7 +392,9 @@ func (s *inStream) disconnectClosingSession(closeSession bool) {
 	if closeSession {
 		s.sess.Close()
 	}
-	inContainer.delete(s)
+	if s.cfg.onInDisconnect != nil {
+		s.cfg.onInDisconnect(s)
+	}
 
 	s.setState(inDisconnected)
 	s.cfg.transport.Close()
@@ -408,7 +408,7 @@ func (s *inStream) restartSession() {
 		MaxStanzaSize: s.cfg.maxStanzaSize,
 		RemoteDomain:  s.remoteDomain,
 		IsServer:      true,
-	})
+	}, s.router)
 	s.setState(inConnecting)
 }
 

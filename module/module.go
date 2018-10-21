@@ -16,6 +16,7 @@ import (
 	"github.com/ortuman/jackal/module/xep0092"
 	"github.com/ortuman/jackal/module/xep0191"
 	"github.com/ortuman/jackal/module/xep0199"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 )
@@ -76,24 +77,24 @@ func (m *Modules) Close() {
 	close(m.shutdownCh)
 }
 
-func New(config *Config) *Modules {
+func New(config *Config, router *router.Router) *Modules {
 	m := &Modules{shutdownCh: make(chan struct{})}
 
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
-	m.DiscoInfo = xep0030.New(m.shutdownCh)
+	m.DiscoInfo = xep0030.New(router, m.shutdownCh)
 	m.iqHandlers = append(m.iqHandlers, m.DiscoInfo)
 	m.all = append(m.all, m.DiscoInfo)
 
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
 	if _, ok := config.Enabled["roster"]; ok {
-		m.Roster = roster.New(&config.Roster, m.shutdownCh)
+		m.Roster = roster.New(&config.Roster, router, m.shutdownCh)
 		m.iqHandlers = append(m.iqHandlers, m.Roster)
 		m.all = append(m.all, m.Roster)
 	}
 
 	// XEP-0012: Last Activity (https://xmpp.org/extensions/xep-0012.html)
 	if _, ok := config.Enabled["last_activity"]; ok {
-		m.LastActivity = xep0012.New(m.DiscoInfo, m.shutdownCh)
+		m.LastActivity = xep0012.New(m.DiscoInfo, router, m.shutdownCh)
 		m.iqHandlers = append(m.iqHandlers, m.LastActivity)
 		m.all = append(m.all, m.LastActivity)
 	}
@@ -128,13 +129,13 @@ func New(config *Config) *Modules {
 
 	// XEP-0160: Offline message storage (https://xmpp.org/extensions/xep-0160.html)
 	if _, ok := config.Enabled["offline"]; ok {
-		m.Offline = offline.New(&config.Offline, m.DiscoInfo, m.shutdownCh)
+		m.Offline = offline.New(&config.Offline, m.DiscoInfo, router, m.shutdownCh)
 		m.all = append(m.all, m.Offline)
 	}
 
 	// XEP-0191: Blocking Command (https://xmpp.org/extensions/xep-0191.html)
 	if _, ok := config.Enabled["blocking_command"]; ok {
-		m.BlockingCmd = xep0191.New(m.DiscoInfo, m.Roster, m.shutdownCh)
+		m.BlockingCmd = xep0191.New(m.DiscoInfo, m.Roster, router, m.shutdownCh)
 		m.iqHandlers = append(m.iqHandlers, m.BlockingCmd)
 		m.all = append(m.all, m.BlockingCmd)
 	}

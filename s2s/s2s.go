@@ -7,7 +7,9 @@ package s2s
 
 import (
 	"errors"
-	"sync"
+	"sync/atomic"
+
+	"github.com/ortuman/jackal/router"
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
@@ -23,49 +25,42 @@ const (
 	dialbackNamespace = "urn:xmpp:features:dialback"
 )
 
-var (
-	instMu        sync.RWMutex
-	defaultDialer *dialer
-	srv           *server
-	initialized   bool
-)
-
-// Initialize initializes s2s sub system.
-func Initialize(cfg *Config, mods *module.Modules) {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if initialized {
-		return
-	}
-	if cfg == nil {
-		log.Infof("s2s disabled")
-		return
-	}
-	defaultDialer = newDialer(cfg)
-	srv = &server{cfg: cfg, mods: mods}
-	go srv.start()
-	initialized = true
+type S2S struct {
+	srv     *server
+	enabled bool
+	started uint32
 }
 
-// Shutdown closes every server listener.
-// This method should be used only for testing purposes.
-func Shutdown() {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if initialized {
-		srv.shutdown()
-		srv = nil
-		initialized = false
+func New(config *Config, mods *module.Modules, router *router.Router) *S2S {
+	s := &S2S{}
+	if config != nil {
+		s.srv = &server{cfg: config, router: router, mods: mods, dialer: newDialer(config, router)}
+		s.enabled = true
+	}
+	return s
+}
+
+func (s *S2S) Enabled() bool {
+	return s.enabled
+}
+
+func (s *S2S) GetS2SOut(localDomain, remoteDomain string) (stream.S2SOut, error) {
+	if s.srv == nil {
+		return nil, errors.New("s2s not initialized")
+	}
+	return s.srv.getOrDial(localDomain, remoteDomain)
+}
+
+func (s *S2S) Start() {
+	if atomic.CompareAndSwapUint32(&s.started, 0, 1) {
+		go s.srv.start()
 	}
 }
 
-// GetS2SOut returns an outgoing s2s stream given a domain pair.
-func GetS2SOut(localDomain, remoteDomain string) (stream.S2SOut, error) {
-	instMu.RLock()
-	if !initialized {
-		instMu.RUnlock()
-		return nil, errors.New("s2s not available")
+func (s *S2S) Stop() {
+	if atomic.CompareAndSwapUint32(&s.started, 1, 0) {
+		if err := s.srv.stop(); err != nil {
+			log.Error(err)
+		}
 	}
-	instMu.RUnlock()
-	return outContainer.getOrDial(localDomain, remoteDomain)
 }

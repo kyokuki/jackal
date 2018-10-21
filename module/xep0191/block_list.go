@@ -29,14 +29,16 @@ const (
 
 // BlockingCommand returns a blocking command IQ handler module.
 type BlockingCommand struct {
+	router     *router.Router
 	roster     *roster.Roster
 	actorCh    chan func()
 	shutdownCh <-chan struct{}
 }
 
 // New returns a blocking command IQ handler module.
-func New(disco *xep0030.DiscoInfo, roster *roster.Roster, shutdownCh <-chan struct{}) *BlockingCommand {
+func New(disco *xep0030.DiscoInfo, roster *roster.Roster, router *router.Router, shutdownCh <-chan struct{}) *BlockingCommand {
 	b := &BlockingCommand{
+		router:     router,
 		roster:     roster,
 		actorCh:    make(chan func(), mailboxSize),
 		shutdownCh: shutdownCh,
@@ -143,7 +145,7 @@ func (x *BlockingCommand) block(iq *xmpp.IQ, block xmpp.XElement, stm stream.C2S
 		stm.SendElement(iq.InternalServerError())
 		return
 	}
-	router.ReloadBlockList(username)
+	x.router.ReloadBlockList(username)
 
 	stm.SendElement(iq.ResultIQ())
 	x.pushIQ(block, stm)
@@ -185,14 +187,14 @@ func (x *BlockingCommand) unblock(iq *xmpp.IQ, unblock xmpp.XElement, stm stream
 		stm.SendElement(iq.InternalServerError())
 		return
 	}
-	router.ReloadBlockList(username)
+	x.router.ReloadBlockList(username)
 
 	stm.SendElement(iq.ResultIQ())
 	x.pushIQ(unblock, stm)
 }
 
 func (x *BlockingCommand) pushIQ(elem xmpp.XElement, stm stream.C2S) {
-	stms := router.UserStreams(stm.Username())
+	stms := x.router.UserStreams(stm.Username())
 	for _, stm := range stms {
 		if !stm.Context().Bool(xep191RequestedContextKey) {
 			continue
@@ -217,7 +219,7 @@ func (x *BlockingCommand) broadcastPresenceMatchingJID(jid *jid.JID, ris []roste
 		if presenceType == xmpp.AvailableType {
 			p.AppendElements(presence.Elements().All())
 		}
-		router.MustRoute(p)
+		x.router.MustRoute(p)
 	}
 }
 

@@ -8,10 +8,13 @@ package s2s
 import (
 	"net"
 	"strconv"
+	"sync"
 	"sync/atomic"
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 )
 
@@ -19,7 +22,11 @@ var listenerProvider = net.Listen
 
 type server struct {
 	cfg       *Config
+	router    *router.Router
 	mods      *module.Modules
+	dialer    *dialer
+	inConns   sync.Map
+	outConns  sync.Map
 	ln        net.Listener
 	listening uint32
 }
@@ -36,10 +43,11 @@ func (s *server) start() {
 	}
 }
 
-func (s *server) shutdown() {
+func (s *server) stop() error {
 	if atomic.CompareAndSwapUint32(&s.listening, 1, 0) {
-		s.ln.Close()
+		return s.ln.Close()
 	}
+	return nil
 }
 
 func (s *server) listenConn(address string) error {
@@ -53,19 +61,55 @@ func (s *server) listenConn(address string) error {
 	for atomic.LoadUint32(&s.listening) == 1 {
 		conn, err := ln.Accept()
 		if err == nil {
-			go s.startStream(transport.NewSocketTransport(conn, s.cfg.Transport.KeepAlive))
+			go s.startInStream(transport.NewSocketTransport(conn, s.cfg.Transport.KeepAlive))
 			continue
 		}
 	}
 	return nil
 }
 
-func (s *server) startStream(tr transport.Transport) {
-	newInStream(&streamConfig{
+func (s *server) getOrDial(localDomain, remoteDomain string) (stream.S2SOut, error) {
+	domainPair := localDomain + ":" + remoteDomain
+	stm, loaded := s.outConns.LoadOrStore(domainPair, newOutStream(s.router))
+	if !loaded {
+		outCfg, err := s.dialer.dial(localDomain, remoteDomain)
+		if err != nil {
+			log.Error(err)
+			s.outConns.Delete(domainPair)
+			return nil, err
+		}
+		outCfg.onOutDisconnect = s.unregisterOutStream
+
+		stm.(*outStream).start(outCfg)
+		log.Infof("registered s2s out stream... (domainpair: %s)", domainPair)
+	}
+	return stm.(*outStream), nil
+}
+
+func (s *server) unregisterOutStream(stm stream.S2SOut) {
+	domainPair := stm.ID()
+	s.outConns.Delete(domainPair)
+	log.Infof("unregistered s2s out stream... (domainpair: %s)", domainPair)
+}
+
+func (s *server) startInStream(tr transport.Transport) {
+	stm := newInStream(&streamConfig{
 		keyGen:         &keyGen{s.cfg.DialbackSecret},
 		transport:      tr,
 		connectTimeout: s.cfg.ConnectTimeout,
 		maxStanzaSize:  s.cfg.MaxStanzaSize,
-		dialer:         newDialerCopy(defaultDialer),
-	}, s.mods)
+		dialer:         s.dialer,
+		onInDisconnect: s.unregisterInStream,
+	}, s.mods, s.router)
+	s.registerInStream(stm)
+}
+
+func (s *server) registerInStream(stm stream.S2SIn) {
+	s.inConns.Store(stm.ID(), stm)
+	log.Infof("registered s2s in stream... (id: %s)", stm.ID())
+}
+
+func (s *server) unregisterInStream(stm stream.S2SIn) {
+	s.inConns.Delete(stm.ID())
+	log.Infof("unregistered s2s in stream... (id: %s)", stm.ID())
 }

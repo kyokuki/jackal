@@ -14,7 +14,7 @@ import (
 )
 
 func TestConfig(t *testing.T) {
-	var cfg1, cfg2 Config
+	var cfg1, cfg2 config
 	b, err := ioutil.ReadFile("./testdata/config_basic.yml")
 	require.Nil(t, err)
 	err = cfg1.FromBuffer(bytes.NewBuffer(b))
@@ -24,7 +24,7 @@ func TestConfig(t *testing.T) {
 }
 
 func TestBadConfigFile(t *testing.T) {
-	var cfg Config
+	var cfg config
 	err := cfg.FromFile("./testdata/not_a_config.yml")
 	require.NotNil(t, err)
 }

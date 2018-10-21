@@ -6,17 +6,19 @@
 package router
 
 import (
+	"crypto/tls"
 	"errors"
-	"io"
 	"sync"
 
-	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
+	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
+
+const defaultDomain = "localhost"
 
 var (
 	// ErrNotExistingAccount will be returned by Route method
@@ -40,112 +42,76 @@ var (
 	ErrFailedRemoteConnect = errors.New("router: failed remote connection")
 )
 
-type Router interface {
-	io.Closer
-
-	Bind(stm stream.C2S)
-	Unbind(stm stream.C2S)
-	UserStreams(username string) []stream.C2S
-	IsBlockedJID(jid *jid.JID, username string) bool
-	ReloadBlockList(username string)
-	Route(stanza xmpp.Stanza) error
-	MustRoute(stanza xmpp.Stanza) error
+type S2SOutProvider interface {
+	GetS2SOut(localDomain, remoteDomain string) (stream.S2SOut, error)
 }
 
-// Config represents router configuration.
-type Config struct {
+type Router struct {
+	mu             sync.RWMutex
+	s2sOutProvider S2SOutProvider
+	hosts          map[string]tls.Certificate
+	localStreams   map[string][]stream.C2S
 
-	// GetS2SOut when set, acts as an s2s outgoing stream provider.
-	GetS2SOut func(localDomain, remoteDomain string) (stream.S2SOut, error)
-}
-
-var (
-	instMu sync.RWMutex
-	inst   Router
-)
-
-var Disabled Router = &disabledRouter{}
-
-func init() {
-	inst = Disabled
-}
-
-func Set(router Router) {
-	instMu.Lock()
-	inst.Close()
-	inst = router
-	instMu.Unlock()
-}
-
-func Unset() {
-	Set(Disabled)
-}
-
-func instance() Router {
-	instMu.RLock()
-	r := inst
-	instMu.RUnlock()
-	return r
-}
-
-// Bind marks a c2s stream as binded.
-// An error will be returned in case no assigned resource is found.
-func Bind(stm stream.C2S) {
-	instance().Bind(stm)
-}
-
-// Unbind unbinds a previously binded c2s.
-// An error will be returned in case no assigned resource is found.
-func Unbind(stm stream.C2S) {
-	instance().Unbind(stm)
-}
-
-// UserStreams returns all streams associated to a user.
-func UserStreams(username string) []stream.C2S {
-	return instance().UserStreams(username)
-}
-
-// IsBlockedJID returns whether or not the passed jid matches any
-// of a user's blocking list JID.
-func IsBlockedJID(jid *jid.JID, username string) bool {
-	return instance().IsBlockedJID(jid, username)
-}
-
-// ReloadBlockList reloads in memory block list for a given user and starts
-// applying it for future stanza routing.
-func ReloadBlockList(username string) {
-	instance().ReloadBlockList(username)
-}
-
-// Route routes a stanza applying server rules for handling XML stanzas.
-// (https://xmpp.org/rfcs/rfc3921.html#rules)
-func Route(stanza xmpp.Stanza) error {
-	return instance().Route(stanza)
-}
-
-// MustRoute routes a stanza applying server rules for handling XML stanzas
-// ignoring blocking lists.
-func MustRoute(stanza xmpp.Stanza) error {
-	return instance().MustRoute(stanza)
-}
-
-type router struct {
-	cfg          *Config
-	mu           sync.RWMutex
-	localStreams map[string][]stream.C2S
 	blockListsMu sync.RWMutex
 	blockLists   map[string][]*jid.JID
 }
 
-func New(config *Config) Router {
-	return &router{
-		cfg:          config,
+func New(config *Config) (*Router, error) {
+	r := &Router{
+		hosts:        make(map[string]tls.Certificate),
 		blockLists:   make(map[string][]*jid.JID),
 		localStreams: make(map[string][]stream.C2S),
 	}
+	if len(config.Hosts) > 0 {
+		for _, h := range config.Hosts {
+			r.hosts[h.Name] = h.Certificate
+		}
+	} else {
+		cer, err := util.LoadCertificate("", "", defaultDomain)
+		if err != nil {
+			return nil, err
+		}
+		r.hosts[defaultDomain] = cer
+	}
+	return r, nil
 }
 
-func (r *router) Bind(stm stream.C2S) {
+func (r *Router) HostNames() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var ret []string
+	for n, _ := range r.hosts {
+		ret = append(ret, n)
+	}
+	return ret
+}
+
+func (r *Router) IsLocalHost(domain string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, ok := r.hosts[domain]
+	return ok
+}
+
+func (r *Router) Certificates() []tls.Certificate {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var certs []tls.Certificate
+	for _, cer := range r.hosts {
+		certs = append(certs, cer)
+	}
+	return certs
+}
+
+func (r *Router) SetS2SOutProvider(s2sOutProvider S2SOutProvider) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.s2sOutProvider = s2sOutProvider
+}
+
+// Bind marks a c2s stream as binded.
+// An error will be returned in case no assigned resource is found.
+func (r *Router) Bind(stm stream.C2S) {
 	if len(stm.Resource()) == 0 {
 		return
 	}
@@ -161,7 +127,9 @@ func (r *router) Bind(stm stream.C2S) {
 	return
 }
 
-func (r *router) Unbind(stm stream.C2S) {
+// Unbind unbinds a previously binded c2s.
+// An error will be returned in case no assigned resource is found.
+func (r *Router) Unbind(stm stream.C2S) {
 	if len(stm.Resource()) == 0 {
 		return
 	}
@@ -185,13 +153,16 @@ func (r *router) Unbind(stm stream.C2S) {
 	log.Infof("unbinded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 }
 
-func (r *router) UserStreams(username string) []stream.C2S {
+// UserStreams returns all streams associated to a user.
+func (r *Router) UserStreams(username string) []stream.C2S {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.localStreams[username]
 }
 
-func (r *router) IsBlockedJID(jid *jid.JID, username string) bool {
+// IsBlockedJID returns whether or not the passed jid matches any
+// of a user's blocking list JID.
+func (r *Router) IsBlockedJID(jid *jid.JID, username string) bool {
 	bl := r.getBlockList(username)
 	for _, blkJID := range bl {
 		if r.jidMatchesBlockedJID(jid, blkJID) {
@@ -201,7 +172,9 @@ func (r *router) IsBlockedJID(jid *jid.JID, username string) bool {
 	return false
 }
 
-func (r *router) ReloadBlockList(username string) {
+// ReloadBlockList reloads in memory block list for a given user and starts
+// applying it for future stanza routing.
+func (r *Router) ReloadBlockList(username string) {
 	r.blockListsMu.Lock()
 	defer r.blockListsMu.Unlock()
 
@@ -209,19 +182,19 @@ func (r *router) ReloadBlockList(username string) {
 	log.Infof("block list reloaded... (username: %s)", username)
 }
 
-func (r *router) Route(stanza xmpp.Stanza) error {
+// Route routes a stanza applying server rules for handling XML stanzas.
+// (https://xmpp.org/rfcs/rfc3921.html#rules)
+func (r *Router) Route(stanza xmpp.Stanza) error {
 	return r.route(stanza, false)
 }
 
-func (r *router) MustRoute(stanza xmpp.Stanza) error {
+// MustRoute routes a stanza applying server rules for handling XML stanzas
+// ignoring blocking lists.
+func (r *Router) MustRoute(stanza xmpp.Stanza) error {
 	return r.route(stanza, true)
 }
 
-func (r *router) Close() error {
-	return nil
-}
-
-func (r *router) jidMatchesBlockedJID(j, blockedJID *jid.JID) bool {
+func (r *Router) jidMatchesBlockedJID(j, blockedJID *jid.JID) bool {
 	if blockedJID.IsFullWithUser() {
 		return j.Matches(blockedJID, jid.MatchesNode|jid.MatchesDomain|jid.MatchesResource)
 	} else if blockedJID.IsFullWithServer() {
@@ -232,7 +205,7 @@ func (r *router) jidMatchesBlockedJID(j, blockedJID *jid.JID) bool {
 	return j.Matches(blockedJID, jid.MatchesDomain)
 }
 
-func (r *router) getBlockList(username string) []*jid.JID {
+func (r *Router) getBlockList(username string) []*jid.JID {
 	r.blockListsMu.RLock()
 	bl := r.blockLists[username]
 	r.blockListsMu.RUnlock()
@@ -255,14 +228,14 @@ func (r *router) getBlockList(username string) []*jid.JID {
 	return bl
 }
 
-func (r *router) route(element xmpp.Stanza, ignoreBlocking bool) error {
+func (r *Router) route(element xmpp.Stanza, ignoreBlocking bool) error {
 	toJID := element.ToJID()
 	if !ignoreBlocking && !toJID.IsServer() {
 		if r.IsBlockedJID(element.FromJID(), toJID.Node()) {
 			return ErrBlockedJID
 		}
 	}
-	if !host.IsLocalHost(toJID.Domain()) {
+	if !r.IsLocalHost(toJID.Domain()) {
 		return r.remoteRoute(element)
 	}
 	rcps := r.UserStreams(toJID.Node())
@@ -311,14 +284,14 @@ func (r *router) route(element xmpp.Stanza, ignoreBlocking bool) error {
 	return nil
 }
 
-func (r *router) remoteRoute(elem xmpp.Stanza) error {
-	if r.cfg.GetS2SOut == nil {
+func (r *Router) remoteRoute(elem xmpp.Stanza) error {
+	if r.s2sOutProvider == nil {
 		return ErrFailedRemoteConnect
 	}
 	localDomain := elem.FromJID().Domain()
 	remoteDomain := elem.ToJID().Domain()
 
-	out, err := r.cfg.GetS2SOut(localDomain, remoteDomain)
+	out, err := r.s2sOutProvider.GetS2SOut(localDomain, remoteDomain)
 	if err != nil {
 		log.Error(err)
 		return ErrFailedRemoteConnect

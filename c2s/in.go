@@ -14,7 +14,6 @@ import (
 	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/errors"
-	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
@@ -38,6 +37,7 @@ const (
 
 type inStream struct {
 	cfg            *streamConfig
+	router         *router.Router
 	mods           *module.Modules
 	comps          *component.Components
 	sess           *session.Session
@@ -58,9 +58,10 @@ type inStream struct {
 	presence      *xmpp.Presence
 }
 
-func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components) stream.C2S {
+func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components, router *router.Router) stream.C2S {
 	s := &inStream{
 		cfg:        config,
+		router:     router,
 		mods:       mods,
 		comps:      comps,
 		id:         id,
@@ -68,7 +69,6 @@ func newStream(id string, config *streamConfig, mods *module.Modules, comps *com
 		actorCh:    make(chan func(), streamMailboxSize),
 		iqResultCh: make(chan xmpp.Stanza, iqResultMailboxSize),
 	}
-	inContainer.set(s)
 
 	// initialize stream context
 	secured := !(config.transport.Type() == transport.Socket)
@@ -418,7 +418,7 @@ func (s *inStream) proceedStartTLS(elem xmpp.XElement) {
 
 	s.writeElement(xmpp.NewElementNamespace("proceed", tlsNamespace))
 
-	s.cfg.transport.StartTLS(&tls.Config{Certificates: host.Certificates()}, false)
+	s.cfg.transport.StartTLS(&tls.Config{Certificates: s.router.Certificates()}, false)
 
 	log.Infof("secured stream... id: %s", s.id)
 	s.restartSession()
@@ -528,7 +528,7 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 	}
 	// try binding...
 	var stm stream.C2S
-	stms := router.UserStreams(s.JID().Node())
+	stms := s.router.UserStreams(s.JID().Node())
 	for _, s := range stms {
 		if s.Resource() == resource {
 			stm = s
@@ -557,7 +557,7 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 
 	s.sess.SetJID(userJID)
 
-	router.Bind(s)
+	s.router.Bind(s)
 
 	//...notify successful binding
 	result := xmpp.NewIQType(iq.ID(), xmpp.ResultType)
@@ -613,9 +613,9 @@ func (s *inStream) processStanza(elem xmpp.Stanza) {
 func (s *inStream) processIQ(iq *xmpp.IQ) {
 	toJID := iq.ToJID()
 
-	replyOnBehalf := !toJID.IsFullWithUser() && host.IsLocalHost(toJID.Domain())
+	replyOnBehalf := !toJID.IsFullWithUser() && s.router.IsLocalHost(toJID.Domain())
 	if !replyOnBehalf {
-		switch router.Route(iq) {
+		switch s.router.Route(iq) {
 		case router.ErrResourceNotFound:
 			s.writeElement(iq.ServiceUnavailableError())
 		case router.ErrFailedRemoteConnect:
@@ -633,7 +633,7 @@ func (s *inStream) processIQ(iq *xmpp.IQ) {
 
 func (s *inStream) processPresence(presence *xmpp.Presence) {
 	if presence.ToJID().IsFullWithUser() {
-		router.Route(presence)
+		s.router.Route(presence)
 		return
 	}
 	replyOnBehalf := s.JID().Matches(presence.ToJID(), jid.MatchesBare)
@@ -658,7 +658,7 @@ func (s *inStream) processMessage(message *xmpp.Message) {
 	toJID := message.ToJID()
 
 sendMessage:
-	err := router.Route(message)
+	err := s.router.Route(message)
 	switch err {
 	case nil:
 		break
@@ -794,19 +794,22 @@ func (s *inStream) disconnectClosingSession(closeSession, unbind bool) {
 	}
 	// unregister stream
 	if unbind {
-		router.Unbind(s)
+		s.router.Unbind(s)
 	}
-	inContainer.delete(s)
+	// notify disconnection
+	if s.cfg.onDisconnect != nil {
+		s.cfg.onDisconnect(s)
+	}
 
 	s.setState(disconnected)
 	s.cfg.transport.Close()
 }
 
 func (s *inStream) isBlockedJID(j *jid.JID) bool {
-	if j.IsServer() && host.IsLocalHost(j.Domain()) {
+	if j.IsServer() && s.router.IsLocalHost(j.Domain()) {
 		return false
 	}
-	return router.IsBlockedJID(j, s.Username())
+	return s.router.IsBlockedJID(j, s.Username())
 }
 
 func (s *inStream) restartSession() {
@@ -814,7 +817,7 @@ func (s *inStream) restartSession() {
 		JID:           s.JID(),
 		Transport:     s.cfg.transport,
 		MaxStanzaSize: s.cfg.maxStanzaSize,
-	})
+	}, s.router)
 	s.setState(connecting)
 }
 

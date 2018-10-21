@@ -8,7 +8,7 @@ package xep0030
 import (
 	"sync"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -24,6 +24,7 @@ const (
 // DiscoInfo represents a disco info server stream module.
 type DiscoInfo struct {
 	mu          sync.RWMutex
+	router      *router.Router
 	srvProvider *serverProvider
 	providers   map[string]InfoProvider
 	actorCh     chan func()
@@ -31,9 +32,10 @@ type DiscoInfo struct {
 }
 
 // New returns a disco info IQ handler module.
-func New(shutdownCh <-chan struct{}) *DiscoInfo {
+func New(router *router.Router, shutdownCh <-chan struct{}) *DiscoInfo {
 	di := &DiscoInfo{
-		srvProvider: &serverProvider{},
+		router:      router,
+		srvProvider: &serverProvider{router: router},
 		providers:   make(map[string]InfoProvider),
 		actorCh:     make(chan func(), mailboxSize),
 		shutdownCh:  shutdownCh,
@@ -123,7 +125,7 @@ func (di *DiscoInfo) processIQ(iq *xmpp.IQ, stm stream.C2S) {
 	toJID := iq.ToJID()
 
 	var prov InfoProvider
-	if host.IsLocalHost(toJID.Domain()) {
+	if di.router.IsLocalHost(toJID.Domain()) {
 		prov = di.srvProvider
 	} else {
 		prov = di.providers[toJID.Domain()]

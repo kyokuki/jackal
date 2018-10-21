@@ -8,16 +8,18 @@ package xep0030
 import (
 	"sync"
 
+	"github.com/ortuman/jackal/router"
+
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/module/xep0004"
-	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 type serverProvider struct {
+	router          *router.Router
 	mu              sync.RWMutex
 	serverItems     []Item
 	serverFeatures  []Feature
@@ -46,7 +48,7 @@ func (sp *serverProvider) Items(toJID, fromJID *jid.JID, node string) ([]Item, *
 	} else {
 		// add account resources
 		if sp.isSubscribedTo(toJID, fromJID) {
-			stms := router.UserStreams(toJID.Node())
+			stms := sp.router.UserStreams(toJID.Node())
 			for _, stm := range stms {
 				itms = append(itms, Item{Jid: stm.JID().String()})
 			}

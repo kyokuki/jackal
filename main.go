@@ -15,10 +15,10 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"syscall"
 
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/component"
-	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
@@ -77,7 +77,7 @@ func main() {
 		return
 	}
 	// load configuration
-	var cfg Config
+	var cfg config
 	if err := cfg.FromFile(configFile); err != nil {
 		logError(err)
 		return
@@ -111,18 +111,14 @@ func main() {
 	storage.Set(s)
 	defer storage.Unset()
 
-	hm, err := host.New(cfg.Hosts)
+	// initialize router
+	r, err := router.New(&cfg.Router)
 	if err != nil {
 		log.Fatal(err)
 	}
-	host.Set(hm)
-	defer host.Unset()
-
-	router.Set(router.New(&router.Config{GetS2SOut: s2s.GetS2SOut}))
-	defer router.Unset()
 
 	// initialize modules & components...
-	mods := module.New(&cfg.Modules)
+	mods := module.New(&cfg.Modules, r)
 	defer mods.Close()
 
 	comps := component.New(&cfg.Components, mods.DiscoInfo)
@@ -145,13 +141,27 @@ func main() {
 	}
 
 	// start serving s2s...
-	s2s.Initialize(cfg.S2S, mods)
+	s2s := s2s.New(cfg.S2S, mods, r)
+	if s2s.Enabled() {
+		r.SetS2SOutProvider(s2s)
+
+		s2s.Start()
+		defer s2s.Stop()
+
+	} else {
+		log.Infof("s2s disabled")
+	}
 
 	// start serving c2s...
-	c2s.Initialize(cfg.C2S, mods, comps)
+	c2s, err := c2s.New(cfg.C2S, mods, comps, r)
+	if err != nil {
+		log.Fatal(err)
+	}
+	c2s.Start()
+	defer c2s.Stop()
 
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
 	<-c
 }
 

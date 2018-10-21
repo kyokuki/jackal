@@ -7,10 +7,12 @@ package c2s
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/router"
 	"github.com/pkg/errors"
 )
 
@@ -29,75 +31,40 @@ const (
 	blockedErrorNamespace     = "urn:xmpp:blocking:errors"
 )
 
-var (
-	mu          sync.RWMutex
-	servers     = make(map[string]*server)
-	shutdownCh  = make(chan chan struct{})
-	initialized bool
-)
-
 type C2S struct {
 	mu      sync.RWMutex
 	servers map[string]*server
+	started uint32
 }
 
-func New(configs []Config, mods *module.Modules, comps *component.Components) *C2S {
-	ss := &C2S{servers: make(map[string]*server)}
+func New(configs []Config, mods *module.Modules, comps *component.Components, router *router.Router) (*C2S, error) {
+	if len(configs) == 0 {
+		return nil, errors.New("at least one c2s configuration is required")
+	}
+	c := &C2S{servers: make(map[string]*server)}
 	for _, config := range configs {
-		srv := &server{cfg: &config, mods: mods, comps: comps}
-		ss.servers[config.ID] = srv
+		srv := &server{cfg: &config, mods: mods, comps: comps, router: router}
+		c.servers[config.ID] = srv
 	}
-	return ss
+	return c, nil
 }
 
-// Initialize initializes c2s sub system spawning a connection listener
-// for every server configuration.
-func Initialize(srvConfigurations []Config, mods *module.Modules, comps *component.Components) {
-	mu.Lock()
-	if initialized {
-		mu.Unlock()
-		return
-	}
-	if len(srvConfigurations) == 0 {
-		log.Error(errors.New("at least one c2s configuration is required"))
-		return
-	}
-	// initialize all servers
-	for i := 0; i < len(srvConfigurations); i++ {
-		if _, err := initializeServer(&srvConfigurations[i], mods, comps); err != nil {
-			log.Fatalf("%v", err)
+// Start initializes c2s sub system spawning a connection listener for every server configuration.
+func (c *C2S) Start() {
+	if atomic.CompareAndSwapUint32(&c.started, 0, 1) {
+		for _, srv := range c.servers {
+			go srv.start()
 		}
 	}
-	initialized = true
-	mu.Unlock()
+}
 
-	// wait until shutdown...
-	doneCh := <-shutdownCh
-
-	mu.Lock()
-	// close all servers
-	for k, srv := range servers {
-		if err := srv.shutdown(); err != nil {
-			log.Error(err)
+// Stop closes every server listener.
+func (c *C2S) Stop() {
+	if atomic.CompareAndSwapUint32(&c.started, 1, 0) {
+		for _, srv := range c.servers {
+			if err := srv.stop(); err != nil {
+				log.Error(err)
+			}
 		}
-		delete(servers, k)
 	}
-	close(doneCh)
-	initialized = false
-	mu.Unlock()
-}
-
-// Shutdown closes every server listener.
-// This method should be used only for testing purposes.
-func Shutdown() {
-	ch := make(chan struct{})
-	shutdownCh <- ch
-	<-ch
-}
-
-func initializeServer(cfg *Config, mods *module.Modules, comps *component.Components) (*server, error) {
-	srv := &server{cfg: cfg, mods: mods, comps: comps}
-	servers[cfg.ID] = srv
-	go srv.start()
-	return srv, nil
 }
