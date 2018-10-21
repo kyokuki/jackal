@@ -9,11 +9,10 @@ import (
 	"bytes"
 	"io/ioutil"
 
-	"github.com/ortuman/jackal/router"
-
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/s2s"
 	"github.com/ortuman/jackal/storage"
 	"gopkg.in/yaml.v2"
