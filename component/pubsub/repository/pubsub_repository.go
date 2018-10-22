@@ -21,11 +21,8 @@ type pubSubRepository struct {
 
 var instancePubSubRepository pubSubRepository
 
-func init()  {
-	instancePubSubRepository.nodes = make(map[cached.NodeKey]*cached.Node)
-}
-
 func Init(mysql string) {
+	instancePubSubRepository.nodes = make(map[cached.NodeKey]*cached.Node)
 	storage.InitStorage(mysql)
 	instancePubSubRepository.dao = storage.Instance()
 }
