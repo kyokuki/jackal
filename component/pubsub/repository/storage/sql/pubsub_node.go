@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/ortuman/jackal/component/pubsub/base"
+	"github.com/ortuman/jackal/component/pubsub/repository/storage/model"
+	"time"
 )
 
 
@@ -29,8 +31,8 @@ func (s *Storage) CreateNode(serviceJid jid.JID, nodeName string, ownerJid jid.J
 
 	err = qSelect.RunWith(s.db).QueryRow().Scan(&retNodeId)
 	if err == sql.ErrNoRows {
-		columns := []string{"service_id", "name", "name_sha1", "type", "creator_id", "configuration", "collection_id"}
-		values := []interface{}{serviceId, nodeName, s.Sha1(nodeName), nodeType, jidId, serializedNodeConfig, collection}
+		columns := []string{"service_id", "name", "name_sha1", "type", "creator_id", "creation_date", "configuration", "collection_id"}
+		values := []interface{}{serviceId, nodeName, s.Sha1(nodeName), nodeType, jidId, time.Now(),serializedNodeConfig, collection}
 
 		qInsert := sq.Insert("pubsub_nodes").
 			Columns(columns...).
@@ -106,4 +108,33 @@ func (s *Storage) PubSubEnsureJid(jid string) (retJidId int64) {
 	}
 	retJidId = qJidId
 	return
+}
+
+
+func (s *Storage) UpdateNodeConfig(jid jid.JID, nodeId int64, serializedData string, collectionId int64) (affectRows int64) {
+	affectRows = 0
+	updateRet, err := s.db.Exec(`update pubsub_nodes set configuration = ?, collection_id = ? where node_id = ?`, serializedData, collectionId, nodeId)
+	if err != nil {
+		affectRows = 0
+	}
+
+	affectRows, _ = updateRet.RowsAffected()
+	return
+}
+
+func (s *Storage) GetNodeMeta(serviceJid jid.JID, nodeName string) (*model.NodeMeta, error) {
+	var nodeMetaVar model.NodeMeta
+	err := s.db.QueryRow(`
+	select n.node_id, n.configuration, cj.jid, n.creation_date
+	from pubsub_nodes n
+		inner join pubsub_service_jids sj on n.service_id = sj.service_id
+		inner join pubsub_jids cj on cj.jid_id = n.creator_id
+		where sj.service_jid_sha1 = ? and n.name_sha1 = ?
+			and sj.service_jid = ? and n.name = ?;
+`, s.Sha1(serviceJid.String()), s.Sha1(nodeName), serviceJid.String(), nodeName).Scan(&nodeMetaVar.NodeId, &nodeMetaVar.NodeConfig, &nodeMetaVar.Creator, &nodeMetaVar.CreateDate)
+	if err != nil {
+		return nil, err
+	}
+
+	return &nodeMetaVar, nil
 }

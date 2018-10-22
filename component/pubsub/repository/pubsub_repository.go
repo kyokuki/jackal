@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"github.com/ortuman/jackal/component/pubsub/repository/storage/interface"
 	"github.com/ortuman/jackal/component/pubsub/repository/storage"
+	"strings"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/module/xep0004"
 )
 
 type pubSubRepository struct {
@@ -109,19 +112,39 @@ func (ps *pubSubRepository) getNode(serviceJid jid.JID, nodeName string) (*cache
 		return node, nil
 	}
 
-	// TODO
-	// get node info from DB, construct a node-struct and return it
+	nodeMeta, err := ps.dao.GetNodeMeta(serviceJid, nodeName)
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	xmppParser := xmpp.NewParser(strings.NewReader(nodeMeta.NodeConfig), xmpp.DefaultMode, 0)
+	nodeConfigElement, err := xmppParser.ParseElement()
+	if err != nil {
+		return nil, err
+	}
+	nodeConfigForm, err := xep0004.NewFormFromElement(nodeConfigElement)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeConfig := base.NewLeafNodeConfig(nodeName)
+	nodeConfig.SetForm(nodeConfigForm)
+
+	creatorJid, _ := jid.NewWithString(nodeMeta.Creator, true)
+	newNode := cached.NewNode(nodeMeta.NodeId, serviceJid, nodeName, *creatorJid, nodeConfig, nodeMeta.CreateDate)
+	newNodeKey := cached.NewNodeKey(serviceJid.ToBareJID().String(), nodeName)
+	ps.nodes[newNodeKey] = &newNode
+
+	return &newNode, nil
 }
 
+
 func (ps *pubSubRepository) UpdateNodeConfig(serviceJid jid.JID, nodeName string, nodeConfig base.AbstractNodeConfig) (error) {
-	nodeKey := cached.NewNodeKey(serviceJid.ToBareJID().String(), nodeName)
-	node, ok := ps.nodes[nodeKey]
-	if !ok {
+	node, err := ps.getNode(serviceJid, nodeName)
+	if err == nil && node != nil {
 		node.NodeConfig.Form().CopyValuesFromDataForm(nodeConfig.Form())
 
-		// TODO  save node config in DB
+		ps.dao.UpdateNodeConfig(serviceJid, node.GetNodeId(), nodeConfig.Form().Element().String(), 0)
 	}
 	return nil
 }

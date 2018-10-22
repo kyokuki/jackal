@@ -26,6 +26,10 @@ func (af *abstractNodeConfig) Form() *xep0004.DataForm {
 	return &af.form
 }
 
+func (af *abstractNodeConfig) SetForm(form *xep0004.DataForm) {
+	af.form = *form
+}
+
 func (af *abstractNodeConfig) init(nodeName string) {
 	af.nodeName = nodeName
 	af.initForm()

@@ -63,3 +63,7 @@ func (nd *Node) SetDeleted()  {
 func (nd *Node) IsDeleted() bool {
 	return nd.deleted
 }
+
+func (nd *Node) GetNodeId() int64 {
+	return nd.nodeId
+}

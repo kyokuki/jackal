@@ -15,7 +15,7 @@ type CollectionNodeConfig struct {
 
 type DefaultNodeConfig struct {
 	LeafNodeConfig
-} 
+}
 
 func NewLeafNodeConfig(nodeName string) *LeafNodeConfig {
 	lf := &LeafNodeConfig{}
