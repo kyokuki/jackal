@@ -12,6 +12,8 @@ import (
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/component/httpupload"
+	"github.com/ortuman/jackal/component/pubsub"
 )
 
 // Component represents a generic component interface.
@@ -61,11 +63,13 @@ func (cs *Components) Close() {
 
 func (cs *Components) loadComponents(config *Config, discoInfo *xep0030.DiscoInfo) []Component {
 	var ret []Component
-	/*
-		discoInfo := module.Modules().DiscoInfo
-		if cfg.HttpUpload != nil {
-			ret = append(ret, httpupload.New(cfg.HttpUpload, discoInfo, shutdownCh))
-		}
-	*/
+
+	if config.HttpUpload != nil {
+		ret = append(ret, httpupload.New(config.HttpUpload, discoInfo, cs.doneCh))
+	}
+	if config.Pubsub != nil {
+		ret = append(ret, pubsub.New(config.Pubsub, discoInfo, cs.doneCh))
+	}
+
 	return ret
 }

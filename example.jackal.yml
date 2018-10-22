@@ -13,8 +13,8 @@ storage:
   type: mysql
   mysql:
     host: 127.0.0.1:3306
-    user: jackal
-    password: password
+    user: root
+    password: root
     database: jackal
     pool_size: 16
 
@@ -56,14 +56,18 @@ modules:
     send_interval: 60
 
 components:
-#  http_upload:
-#    host: upload.jackal.im
-#    base_url: https://jackal.im:4430/upload
-#    port: 4430
-#    upload_path: /var/lib/jackal/httpupload
-#    size_limit: 1048576
-#    quota: 0
-#    expire_after: 600 # secs.
+  http_upload:
+    host: upload.jackal.im
+    base_url: https://jackal.im:4430/upload
+    port: 4430
+    upload_path: /var/lib/jackal/httpupload
+    size_limit: 1048576
+    quota: 0
+    expire_after: 600 # secs.
+
+  pubsub:
+    host: pubsub.jackal.im
+    mysql : root:root@tcp(127.0.0.1:3306)/jackal?charset=utf8&allowOldPasswords=1&parseTime=1
 
 c2s:
   - id: default
