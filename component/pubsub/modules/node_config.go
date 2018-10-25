@@ -65,8 +65,6 @@ func (s *NodeConfigModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 		return base.NewPubSubErrorStanza(packet, xmpp.ErrItemNotFound, nil)
 	}
 
-
-
 	tmpNodeAffiliations := repository.Repository().GetNodeAffiliations(*toJID, nodeName)
 	// TODO when jid is admin, do not check privileges
 	if !false {

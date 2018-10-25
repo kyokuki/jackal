@@ -18,8 +18,8 @@ func NewUsersAffiliation(jid jid.JID, affiliation enums.AffiliationType) UsersAf
 	return u
 }
 
-func (ua *UsersAffiliation) GetJid() jid.JID {
-	return ua.jid
+func (ua *UsersAffiliation) GetJid() *jid.JID {
+	return &ua.jid
 }
 
 func (ua *UsersAffiliation) GetAffiliation() enums.AffiliationType {

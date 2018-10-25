@@ -52,8 +52,16 @@ func (nd *Node) GetNodeAffiliations() *NodeAffiliations {
 	return nd.nodeAffiliations
 }
 
+func (nd *Node) SetNodeAffiliations(newNodeAffiliations *NodeAffiliations) {
+	nd.nodeAffiliations = newNodeAffiliations
+}
+
 func (nd *Node) GetNodeSubscriptions() *NodeSubscriptions {
 	return nd.nodeSubscriptions
+}
+
+func (nd *Node) SetNodeSubscriptions(newNodeSubscriptions *NodeSubscriptions) {
+	nd.nodeSubscriptions = newNodeSubscriptions
 }
 
 func (nd *Node) SetDeleted()  {

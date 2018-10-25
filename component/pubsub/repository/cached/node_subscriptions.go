@@ -22,6 +22,16 @@ func NewNodeSubscriptions() *NodeSubscriptions {
 	return &a
 }
 
+func (ns *NodeSubscriptions) GetChanged() []stateless.UsersSubscription{
+	ns.mutex.RLock()
+	defer ns.mutex.RUnlock()
+	var userSubs []stateless.UsersSubscription
+	for _, changedSub := range ns.changedSubs {
+		userSubs = append(userSubs, changedSub)
+	}
+	return userSubs
+}
+
 func (ns *NodeSubscriptions) GetSubscriptions() []stateless.UsersSubscription{
 	ns.mutex.RLock()
 	defer ns.mutex.RUnlock()

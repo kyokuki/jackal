@@ -7,8 +7,10 @@ import (
 	"github.com/ortuman/jackal/component/pubsub/base"
 	"github.com/ortuman/jackal/component/pubsub/repository/storage/model"
 	"time"
+	"github.com/ortuman/jackal/component/pubsub/repository/stateless"
+	"github.com/ortuman/jackal/component/pubsub/enums"
+	"github.com/ortuman/jackal/component/pubsub/repository/cached"
 )
-
 
 func (s *Storage) CreateNode(serviceJid jid.JID, nodeName string, ownerJid jid.JID, nodeConfig base.AbstractNodeConfig, nodeType int, collection string) (int64, error) {
 	var err error
@@ -32,7 +34,7 @@ func (s *Storage) CreateNode(serviceJid jid.JID, nodeName string, ownerJid jid.J
 	err = qSelect.RunWith(s.db).QueryRow().Scan(&retNodeId)
 	if err == sql.ErrNoRows {
 		columns := []string{"service_id", "name", "name_sha1", "type", "creator_id", "creation_date", "configuration", "collection_id"}
-		values := []interface{}{serviceId, nodeName, s.Sha1(nodeName), nodeType, jidId, time.Now(),serializedNodeConfig, collection}
+		values := []interface{}{serviceId, nodeName, s.Sha1(nodeName), nodeType, jidId, time.Now(), serializedNodeConfig, collection}
 
 		qInsert := sq.Insert("pubsub_nodes").
 			Columns(columns...).
@@ -110,7 +112,6 @@ func (s *Storage) PubSubEnsureJid(jid string) (retJidId int64) {
 	return
 }
 
-
 func (s *Storage) UpdateNodeConfig(jid jid.JID, nodeId int64, serializedData string, collectionId int64) (affectRows int64) {
 	affectRows = 0
 	updateRet, err := s.db.Exec(`update pubsub_nodes set configuration = ?, collection_id = ? where node_id = ?`, serializedData, collectionId, nodeId)
@@ -137,4 +138,127 @@ func (s *Storage) GetNodeMeta(serviceJid jid.JID, nodeName string) (*model.NodeM
 	}
 
 	return &nodeMetaVar, nil
+}
+
+func (s *Storage) SetNodeAffiliation(serviceJid jid.JID, nodeId int64, nodeName string, affiliation stateless.UsersAffiliation) (error) {
+	var (
+		err       error
+		vJidId    int64
+		vAffExist int64
+	)
+	jid := affiliation.GetJid().ToBareJID().String()
+	err = s.db.QueryRow("select jid_id  from pubsub_jids where jid_sha1 = ? and jid = ?", s.Sha1(jid), jid).Scan(&vJidId)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	err = nil
+
+	if vJidId > 0 {
+		err = s.db.QueryRow("select 1 from pubsub_affiliations pa where pa.node_id = ? and pa.jid_id = ?", nodeId, vJidId).Scan(vAffExist)
+		if err == nil {
+			vAffExist = 1
+		} else if err == sql.ErrNoRows {
+			vAffExist = 0
+			err = nil
+		} else {
+			return err
+		}
+	}
+
+	if affiliation.GetAffiliation() != enums.AffiliationNone {
+		if vJidId <= 0 {
+			vJidId = s.PubSubEnsureJid(jid)
+		}
+
+		if vAffExist > 0 {
+			_, err = s.db.Exec("update pubsub_affiliations set affiliation = ? where node_id = ? and jid_id = ?",
+				affiliation.GetAffiliation().String(), nodeId, vJidId)
+			if err != nil {
+				return err
+			}
+		} else {
+			_, err = s.db.Exec("insert into pubsub_affiliations (node_id, jid_id, affiliation) values (?, ?, ?)",
+				nodeId, vJidId, affiliation.GetAffiliation().String())
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		if vAffExist > 0 {
+			_, err = s.db.Exec("delete from pubsub_affiliations where node_id = ? and jid_id = ?", nodeId, vJidId)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (s *Storage) SetNodeSubscription(serviceJid jid.JID, nodeId int64, nodeName string, subscription stateless.UsersSubscription) (error) {
+	var (
+		err       error
+		vJidId    int64
+		vSubExist int64
+	)
+	jid := subscription.GetJid().ToBareJID().String()
+
+	vJidId = s.PubSubEnsureJid(jid)
+	if vJidId > 0 {
+		err = s.db.QueryRow("select 1  from pubsub_subscriptions where node_id = ? and jid_id = ?", nodeId, vJidId).Scan(vSubExist)
+		if err == nil {
+			vSubExist = 1
+		} else if err == sql.ErrNoRows {
+			vSubExist = 0
+			err = nil
+		} else {
+			return err
+		}
+	}
+
+	if vSubExist > 0 {
+		_, err = s.db.Exec("update pubsub_subscriptions set subscription = ? where node_id = ? and jid_id = ?",
+			subscription.GetSubscription().String(), nodeId, vJidId)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err = s.db.Exec("insert into pubsub_subscriptions (node_id,jid_id,subscription,subscription_id) values (?,?,?,?)",
+			nodeId, vJidId, subscription.GetSubscription().String(), subscription.GetSubid())
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+
+func (s *Storage) GetNodeAffiliations(serviceJid jid.JID, nodeId int64) (*cached.NodeAffiliations ,error) {
+	var err error
+	rows, err := s.db.Query(`
+		select pj.jid, pa.affiliation from pubsub_affiliations pa
+		inner join pubsub_jids pj on pa.jid_id = pj.jid_id
+		where pa.node_id = ?`, nodeId)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	defer rows.Close()
+
+	nodeAffiliations := cached.NewNodeAffiliations()
+	for rows.Next() {
+		var (
+			scanJid string
+			scanAff string
+		)
+		err = rows.Scan(&scanJid, &scanAff)
+		if err != nil {
+			return nil, err
+		}
+		saveJid, _ := jid.NewWithString(scanJid, false)
+		aff := enums.AffiliationType(scanAff)
+		nodeAffiliations.AddAffiliation(*saveJid, aff)
+	}
+	nodeAffiliations.AffiliationsSaved()
+	return nodeAffiliations, nil
 }

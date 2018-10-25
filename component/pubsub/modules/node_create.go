@@ -131,6 +131,7 @@ func (s *NodeCreateModule) Process(packet xmpp.Stanza, stm stream.C2S) *base.Pub
 	tmpNodeAffiliations := repository.Repository().GetNodeAffiliations(*toJID, nodeName)
 
 	// TODO check configure AutoSubscribeNodeCreator, then subscribe
+	// currently here Always do AutoSubscribe
 	if true {
 		if tmpNodeSubscriptions != nil {
 			tmpNodeSubscriptions.AddSubscriberJid(*fromJID, enums.SubscriptionSubscribed)

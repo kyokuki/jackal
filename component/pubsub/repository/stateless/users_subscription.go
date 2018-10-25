@@ -20,8 +20,8 @@ func NewUsersSubscription(jid jid.JID, subid string, subscription enums.Subscrip
 	return s
 }
 
-func (us *UsersSubscription) GetJid() jid.JID {
-	return us.jid
+func (us *UsersSubscription) GetJid() *jid.JID {
+	return &us.jid
 }
 
 func (us *UsersSubscription) GetSubid() string {

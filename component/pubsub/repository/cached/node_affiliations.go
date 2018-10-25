@@ -20,6 +20,16 @@ func NewNodeAffiliations() *NodeAffiliations {
 	return &a
 }
 
+func (na *NodeAffiliations) GetChanged() []stateless.UsersAffiliation{
+	na.mutex.RLock()
+	defer na.mutex.RUnlock()
+	var userAffs []stateless.UsersAffiliation
+	for _, changedAffs := range na.changedAffs {
+		userAffs = append(userAffs, changedAffs)
+	}
+	return userAffs
+}
+
 func (na *NodeAffiliations) GetAffiliations() []stateless.UsersAffiliation{
 	na.mutex.RLock()
 	defer na.mutex.RUnlock()
