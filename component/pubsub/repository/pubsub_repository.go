@@ -181,7 +181,6 @@ func (ps *pubSubRepository) UpdateNodeAffiliations(serviceJid jid.JID, nodeName 
 			}
 			node.GetNodeAffiliations().AffiliationsSaved()
 		}
-
 	}
 
 	return nil

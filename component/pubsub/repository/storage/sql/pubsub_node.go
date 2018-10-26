@@ -126,13 +126,14 @@ func (s *Storage) UpdateNodeConfig(jid jid.JID, nodeId int64, serializedData str
 func (s *Storage) GetNodeMeta(serviceJid jid.JID, nodeName string) (*model.NodeMeta, error) {
 	var nodeMetaVar model.NodeMeta
 	err := s.db.QueryRow(`
-	select n.node_id, n.configuration, cj.jid, n.creation_date
-	from pubsub_nodes n
+		select n.node_id, n.configuration, cj.jid, n.creation_date
+		from pubsub_nodes n
 		inner join pubsub_service_jids sj on n.service_id = sj.service_id
 		inner join pubsub_jids cj on cj.jid_id = n.creator_id
 		where sj.service_jid_sha1 = ? and n.name_sha1 = ?
-			and sj.service_jid = ? and n.name = ?;
-`, s.Sha1(serviceJid.String()), s.Sha1(nodeName), serviceJid.String(), nodeName).Scan(&nodeMetaVar.NodeId, &nodeMetaVar.NodeConfig, &nodeMetaVar.Creator, &nodeMetaVar.CreateDate)
+			and sj.service_jid = ? and n.name = ? `,
+		s.Sha1(serviceJid.String()), s.Sha1(nodeName), serviceJid.String(), nodeName).
+		Scan(&nodeMetaVar.NodeId, &nodeMetaVar.NodeConfig, &nodeMetaVar.Creator, &nodeMetaVar.CreateDate)
 	if err != nil {
 		return nil, err
 	}
@@ -233,8 +234,7 @@ func (s *Storage) SetNodeSubscription(serviceJid jid.JID, nodeId int64, nodeName
 	return nil
 }
 
-
-func (s *Storage) GetNodeAffiliations(serviceJid jid.JID, nodeId int64) (*cached.NodeAffiliations ,error) {
+func (s *Storage) GetNodeAffiliations(serviceJid jid.JID, nodeId int64) (*cached.NodeAffiliations, error) {
 	var err error
 	rows, err := s.db.Query(`
 		select pj.jid, pa.affiliation from pubsub_affiliations pa
@@ -263,7 +263,7 @@ func (s *Storage) GetNodeAffiliations(serviceJid jid.JID, nodeId int64) (*cached
 	return nodeAffiliations, nil
 }
 
-func (s *Storage) GetNodeSubscriptions(serviceJid jid.JID, nodeId int64) (*cached.NodeSubscriptions ,error) {
+func (s *Storage) GetNodeSubscriptions(serviceJid jid.JID, nodeId int64) (*cached.NodeSubscriptions, error) {
 	var err error
 	rows, err := s.db.Query(`
 		select pj.jid, ps.subscription, ps.subscription_id
@@ -278,8 +278,8 @@ func (s *Storage) GetNodeSubscriptions(serviceJid jid.JID, nodeId int64) (*cache
 	nodeSubscriptions := cached.NewNodeSubscriptions()
 	for rows.Next() {
 		var (
-			scanJid string
-			scanSub string
+			scanJid   string
+			scanSub   string
 			scanSubid string
 		)
 		err = rows.Scan(&scanJid, &scanSub, &scanSubid)
