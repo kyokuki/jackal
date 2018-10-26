@@ -79,6 +79,9 @@ func (s *NodeDeleteModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 	//
 	//}
 
+	// TODO collection node
+	// if this node has a parent node, then remove this node from the parent node
+
 	repository.Repository().DeleteNode(*toJID, nodeName)
 
 	stm.SendElement(resultStanza)

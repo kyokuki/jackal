@@ -92,8 +92,7 @@ func (ps *pubSubRepository) DeleteNode(serviceJid jid.JID, nodeName string) erro
 		return nil
 	}
 
-	// TODO
-	// delete Node Info from DB ...
+	ps.dao.DeleteNode(serviceJid, node.GetNodeId())
 
 	nodeKey := cached.NewNodeKey(serviceJid.ToBareJID().String(), nodeName)
 	delete(ps.nodes, nodeKey)

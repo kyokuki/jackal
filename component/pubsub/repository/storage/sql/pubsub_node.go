@@ -1,12 +1,10 @@
 package sql
 
 import (
-	sq "github.com/Masterminds/squirrel"
 	"database/sql"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/ortuman/jackal/component/pubsub/base"
 	"github.com/ortuman/jackal/component/pubsub/repository/storage/model"
-	"time"
 	"github.com/ortuman/jackal/component/pubsub/repository/stateless"
 	"github.com/ortuman/jackal/component/pubsub/enums"
 	"github.com/ortuman/jackal/component/pubsub/repository/cached"
@@ -21,35 +19,47 @@ func (s *Storage) CreateNode(serviceJid jid.JID, nodeName string, ownerJid jid.J
 		serializedNodeConfig = nodeConfig.Form().Element().String()
 	}
 
-	serviceId := s.PubSubEnsureServiceJid(serviceJid.String())
-	jidId := s.PubSubEnsureJid(ownerJid.String())
-
-	qSelect := sq.Select("node_id").
-		From("pubsub_nodes").
-		Where(sq.Eq{
-		"name":       nodeName,
-		"service_id": serviceId,
-	})
-
-	err = qSelect.RunWith(s.db).QueryRow().Scan(&retNodeId)
-	if err == sql.ErrNoRows {
-		columns := []string{"service_id", "name", "name_sha1", "type", "creator_id", "creation_date", "configuration", "collection_id"}
-		values := []interface{}{serviceId, nodeName, s.Sha1(nodeName), nodeType, jidId, time.Now(), serializedNodeConfig, collection}
-
-		qInsert := sq.Insert("pubsub_nodes").
-			Columns(columns...).
-			Values(values...)
-		sqlRet, err := qInsert.RunWith(s.db).Exec()
-		if err == nil {
-			retNodeId, err = sqlRet.LastInsertId()
-		}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return retNodeId, err
 	}
 
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		} else {
+			if err != nil {
+				tx.Rollback()
+			}
+		}
+	}()
+
+	serviceId, err := s.privatePubSubEnsureServiceJid(tx, serviceJid.String())
+	if err != nil {
+		return retNodeId, err
+	}
+	jidId, err := s.privatePubSubEnsureJid(tx, ownerJid.String())
+	if err != nil {
+		return retNodeId, err
+	}
+
+	err = tx.QueryRow("select node_id  from pubsub_nodes where name = ? and service_id = ?", nodeName, serviceId).Scan(&retNodeId)
+	if err == sql.ErrNoRows {
+		err = nil
+		sqlRet, err := tx.Exec("insert into pubsub_nodes (service_id,name,name_sha1,`type`,creator_id,configuration,collection_id) values (?, ?, ?, ?, ?, ?, ?)",
+			serviceId, nodeName, s.Sha1(nodeName), nodeType, jidId, serializedNodeConfig, collection)
+		if err != nil {
+			return retNodeId, err
+		}
+		retNodeId, err = sqlRet.LastInsertId()
+	}
+
+	tx.Commit()
 	return retNodeId, err
 }
 
-func (s *Storage) GetNodeId(serviceJid jid.JID, nodeName string) (retNodeId int64) {
-	retNodeId = -1
+func (s *Storage) GetNodeId(serviceJid jid.JID, nodeName string) (int64) {
+	var retNodeId int64 = -1
 	err := s.db.QueryRow(`
 				select n.node_id from pubsub_nodes n 
 				inner join pubsub_service_jids sj on n.service_id = sj.service_id
@@ -57,70 +67,65 @@ func (s *Storage) GetNodeId(serviceJid jid.JID, nodeName string) (retNodeId int6
 	if err != nil {
 		retNodeId = -1
 	}
-	return
+	return retNodeId
 }
 
-func (s *Storage) PubSubEnsureServiceJid(serviceJid string) (retServiceId int64) {
-	retServiceId = -1
-	qSelect := sq.Select("service_id").
-		From("pubsub_service_jids").
-		Where(sq.Eq{
-		"service_jid":      serviceJid,
-		"service_jid_sha1": s.Sha1(serviceJid),
-	})
+func (s *Storage) privatePubSubEnsureServiceJid(tx *sql.Tx, serviceJid string) (int64, error) {
+	var (
+		err          error
+		retServiceId int64 = -1
+		qServiceId   int64
+	)
 
-	var qServiceId int64
-	err := qSelect.RunWith(s.db).QueryRow().Scan(&qServiceId)
-	if err == sql.ErrNoRows {
-		qInsert := sq.Insert("pubsub_service_jids").
-			Columns([]string{"service_jid", "service_jid_sha1"}...).
-			Values([]interface{}{serviceJid, s.Sha1(serviceJid)}...)
-
-		sqlRet, err := qInsert.RunWith(s.db).Exec()
+	err = tx.QueryRow("select service_id from pubsub_service_jids where service_jid_sha1 = ? and service_jid = ?",
+		s.Sha1(serviceJid), serviceJid).Scan(&qServiceId)
+	if err == nil {
+		retServiceId = qServiceId
+	} else if err == sql.ErrNoRows {
+		err = nil
+		sqlRet, err := tx.Exec(`insert into pubsub_service_jids (service_jid, service_jid_sha1) values (?, ?)`, serviceJid, s.Sha1(serviceJid))
 		if err == nil {
 			retServiceId, _ = sqlRet.LastInsertId()
-			return
+			return retServiceId, err
 		}
 	}
-	retServiceId = qServiceId
-	return
+	return retServiceId, err
 }
 
-func (s *Storage) PubSubEnsureJid(jid string) (retJidId int64) {
-	retJidId = -1
-	qSelect := sq.Select("jid_id").
-		From("pubsub_jids").
-		Where(sq.Eq{
-		"jid":      jid,
-		"jid_sha1": s.Sha1(jid),
-	})
+func (s *Storage) privatePubSubEnsureJid(tx *sql.Tx, jid string) (int64, error) {
+	var (
+		err      error
+		retJidId int64 = -1
+		qJidId   int64
+	)
 
-	var qJidId int64
-	err := qSelect.RunWith(s.db).QueryRow().Scan(&qJidId)
-	if err == sql.ErrNoRows {
-		qInsert := sq.Insert("pubsub_jids").
-			Columns([]string{"jid", "jid_sha1"}...).
-			Values([]interface{}{jid, s.Sha1(jid)}...)
-
-		sqlRet, err := qInsert.RunWith(s.db).Exec()
+	err = tx.QueryRow("select jid_id from pubsub_jids where jid = ? and jid_sha1 = ?", jid, s.Sha1(jid)).Scan(&qJidId)
+	if err == nil {
+		retJidId = qJidId
+	} else if err == sql.ErrNoRows {
+		err = nil
+		sqlRet, err := tx.Exec("insert into pubsub_jids (jid, jid_sha1) values (?, ?)", jid, s.Sha1(jid))
 		if err == nil {
 			retJidId, _ = sqlRet.LastInsertId()
-			return
+			return retJidId, err
 		}
 	}
-	retJidId = qJidId
-	return
+	return retJidId, err
 }
 
-func (s *Storage) UpdateNodeConfig(jid jid.JID, nodeId int64, serializedData string, collectionId int64) (affectRows int64) {
-	affectRows = 0
+func (s *Storage) UpdateNodeConfig(jid jid.JID, nodeId int64, serializedData string, collectionId int64) (int64, error) {
+	var (
+		affectRows int64 = 0
+		err        error
+	)
+
 	updateRet, err := s.db.Exec(`update pubsub_nodes set configuration = ?, collection_id = ? where node_id = ?`, serializedData, collectionId, nodeId)
 	if err != nil {
 		affectRows = 0
 	}
 
-	affectRows, _ = updateRet.RowsAffected()
-	return
+	affectRows, err = updateRet.RowsAffected()
+	return affectRows, err
 }
 
 func (s *Storage) GetNodeMeta(serviceJid jid.JID, nodeName string) (*model.NodeMeta, error) {
@@ -148,14 +153,30 @@ func (s *Storage) SetNodeAffiliation(serviceJid jid.JID, nodeId int64, nodeName 
 		vAffExist int64
 	)
 	jid := affiliation.GetJid().ToBareJID().String()
-	err = s.db.QueryRow("select jid_id  from pubsub_jids where jid_sha1 = ? and jid = ?", s.Sha1(jid), jid).Scan(&vJidId)
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		} else {
+			if err != nil {
+				tx.Rollback()
+			}
+		}
+	}()
+
+	err = tx.QueryRow("select jid_id  from pubsub_jids where jid_sha1 = ? and jid = ?", s.Sha1(jid), jid).Scan(&vJidId)
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
 	err = nil
 
 	if vJidId > 0 {
-		err = s.db.QueryRow("select 1 from pubsub_affiliations pa where pa.node_id = ? and pa.jid_id = ?", nodeId, vJidId).Scan(vAffExist)
+		err = tx.QueryRow("select 1 from pubsub_affiliations pa where pa.node_id = ? and pa.jid_id = ?", nodeId, vJidId).Scan(vAffExist)
 		if err == nil {
 			vAffExist = 1
 		} else if err == sql.ErrNoRows {
@@ -168,17 +189,20 @@ func (s *Storage) SetNodeAffiliation(serviceJid jid.JID, nodeId int64, nodeName 
 
 	if affiliation.GetAffiliation() != enums.AffiliationNone {
 		if vJidId <= 0 {
-			vJidId = s.PubSubEnsureJid(jid)
+			vJidId, err = s.privatePubSubEnsureJid(tx, jid)
+			if err != nil {
+				return err
+			}
 		}
 
 		if vAffExist > 0 {
-			_, err = s.db.Exec("update pubsub_affiliations set affiliation = ? where node_id = ? and jid_id = ?",
+			_, err = tx.Exec("update pubsub_affiliations set affiliation = ? where node_id = ? and jid_id = ?",
 				affiliation.GetAffiliation().String(), nodeId, vJidId)
 			if err != nil {
 				return err
 			}
 		} else {
-			_, err = s.db.Exec("insert into pubsub_affiliations (node_id, jid_id, affiliation) values (?, ?, ?)",
+			_, err = tx.Exec("insert into pubsub_affiliations (node_id, jid_id, affiliation) values (?, ?, ?)",
 				nodeId, vJidId, affiliation.GetAffiliation().String())
 			if err != nil {
 				return err
@@ -186,13 +210,14 @@ func (s *Storage) SetNodeAffiliation(serviceJid jid.JID, nodeId int64, nodeName 
 		}
 	} else {
 		if vAffExist > 0 {
-			_, err = s.db.Exec("delete from pubsub_affiliations where node_id = ? and jid_id = ?", nodeId, vJidId)
+			_, err = tx.Exec("delete from pubsub_affiliations where node_id = ? and jid_id = ?", nodeId, vJidId)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
+	tx.Commit()
 	return nil
 }
 
@@ -204,9 +229,27 @@ func (s *Storage) SetNodeSubscription(serviceJid jid.JID, nodeId int64, nodeName
 	)
 	jid := subscription.GetJid().ToBareJID().String()
 
-	vJidId = s.PubSubEnsureJid(jid)
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		} else {
+			if err != nil {
+				tx.Rollback()
+			}
+		}
+	}()
+
+	vJidId, err = s.privatePubSubEnsureJid(tx, jid)
+	if err != nil {
+		return err
+	}
 	if vJidId > 0 {
-		err = s.db.QueryRow("select 1  from pubsub_subscriptions where node_id = ? and jid_id = ?", nodeId, vJidId).Scan(vSubExist)
+		err = tx.QueryRow("select 1  from pubsub_subscriptions where node_id = ? and jid_id = ?", nodeId, vJidId).Scan(vSubExist)
 		if err == nil {
 			vSubExist = 1
 		} else if err == sql.ErrNoRows {
@@ -218,19 +261,20 @@ func (s *Storage) SetNodeSubscription(serviceJid jid.JID, nodeId int64, nodeName
 	}
 
 	if vSubExist > 0 {
-		_, err = s.db.Exec("update pubsub_subscriptions set subscription = ? where node_id = ? and jid_id = ?",
+		_, err = tx.Exec("update pubsub_subscriptions set subscription = ? where node_id = ? and jid_id = ?",
 			subscription.GetSubscription().String(), nodeId, vJidId)
 		if err != nil {
 			return err
 		}
 	} else {
-		_, err = s.db.Exec("insert into pubsub_subscriptions (node_id,jid_id,subscription,subscription_id) values (?,?,?,?)",
+		_, err = tx.Exec("insert into pubsub_subscriptions (node_id,jid_id,subscription,subscription_id) values (?,?,?,?)",
 			nodeId, vJidId, subscription.GetSubscription().String(), subscription.GetSubid())
 		if err != nil {
 			return err
 		}
 	}
 
+	tx.Commit()
 	return nil
 }
 
@@ -292,4 +336,42 @@ func (s *Storage) GetNodeSubscriptions(serviceJid jid.JID, nodeId int64) (*cache
 	}
 	nodeSubscriptions.SubscriptionsSaved()
 	return nodeSubscriptions, nil
+}
+
+func (s *Storage) DeleteNode(serviceJid jid.JID, nodeId int64) (error) {
+	var err error
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		} else {
+			if err != nil {
+				tx.Rollback()
+			}
+		}
+	}()
+
+	_, err = tx.Exec("delete from pubsub_items where node_id = ?", nodeId)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec("delete from pubsub_subscriptions where node_id = ?", nodeId)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec("delete from pubsub_affiliations where node_id = ?", nodeId)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec("delete from pubsub_nodes where node_id = ?", nodeId)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	return err
 }
