@@ -8,6 +8,7 @@ import (
 	"github.com/ortuman/jackal/component/pubsub/repository/stateless"
 	"github.com/ortuman/jackal/component/pubsub/enums"
 	"github.com/ortuman/jackal/component/pubsub/repository/cached"
+	"time"
 )
 
 func (s *Storage) CreateNode(serviceJid jid.JID, nodeName string, ownerJid jid.JID, nodeConfig base.AbstractNodeConfig, nodeType int, collection string) (int64, error) {
@@ -46,8 +47,8 @@ func (s *Storage) CreateNode(serviceJid jid.JID, nodeName string, ownerJid jid.J
 	err = tx.QueryRow("select node_id  from pubsub_nodes where name = ? and service_id = ?", nodeName, serviceId).Scan(&retNodeId)
 	if err == sql.ErrNoRows {
 		err = nil
-		sqlRet, err := tx.Exec("insert into pubsub_nodes (service_id,name,name_sha1,`type`,creator_id,configuration,collection_id) values (?, ?, ?, ?, ?, ?, ?)",
-			serviceId, nodeName, s.Sha1(nodeName), nodeType, jidId, serializedNodeConfig, collection)
+		sqlRet, err := tx.Exec("insert into pubsub_nodes (service_id,name,name_sha1,`type`,creator_id,configuration,collection_id,creation_date) values (?, ?, ?, ?, ?, ?, ?, ?)",
+			serviceId, nodeName, s.Sha1(nodeName), nodeType, jidId, serializedNodeConfig, collection, time.Now().UTC())
 		if err != nil {
 			return retNodeId, err
 		}
