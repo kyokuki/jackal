@@ -55,6 +55,14 @@ func (ns *NodeSubscriptions) AddSubscriberJid(bareJid jid.JID, sub enums.Subscri
 	delete(ns.subs, *bareJid.ToBareJID())
 }
 
+func (ns *NodeSubscriptions) AddSubscription(bareJid jid.JID, sub enums.SubscriptionType, subid string) {
+	ns.mutex.Lock()
+	defer ns.mutex.Unlock()
+	userSub := stateless.NewUsersSubscription(bareJid, subid, sub)
+	ns.changedSubs[*bareJid.ToBareJID()] = userSub
+	delete(ns.subs, *bareJid.ToBareJID())
+}
+
 func (ns *NodeSubscriptions) ChangeSubscription(bareJid jid.JID, sub enums.SubscriptionType) {
 	ns.mutex.Lock()
 	defer ns.mutex.Unlock()

@@ -126,16 +126,16 @@ func (ps *pubSubRepository) getNode(serviceJid jid.JID, nodeName string) (*cache
 	nodeConfig.SetForm(nodeConfigForm)
 
 	nodeAffiliations, err := ps.dao.GetNodeAffiliations(serviceJid, nodeMeta.NodeId)
+	nodeSubscriptions, err := ps.dao.GetNodeSubscriptions(serviceJid, nodeMeta.NodeId)
 
 	creatorJid, _ := jid.NewWithString(nodeMeta.Creator, true)
 	newNode := cached.NewNode(nodeMeta.NodeId, serviceJid, nodeName, *creatorJid, nodeConfig, nodeMeta.CreateDate)
-	newNode.SetNodeAffiliations(nodeAffiliations)
 
+	newNode.SetNodeAffiliations(nodeAffiliations)
+	newNode.SetNodeSubscriptions(nodeSubscriptions)
 
 	newNodeKey := cached.NewNodeKey(serviceJid.ToBareJID().String(), nodeName)
 	ps.nodes[newNodeKey] = &newNode
-
-	// TODO set up NodeAffiliations and NodeSubscriptions
 
 	return &newNode, nil
 }

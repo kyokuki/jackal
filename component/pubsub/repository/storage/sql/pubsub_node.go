@@ -262,3 +262,34 @@ func (s *Storage) GetNodeAffiliations(serviceJid jid.JID, nodeId int64) (*cached
 	nodeAffiliations.AffiliationsSaved()
 	return nodeAffiliations, nil
 }
+
+func (s *Storage) GetNodeSubscriptions(serviceJid jid.JID, nodeId int64) (*cached.NodeSubscriptions ,error) {
+	var err error
+	rows, err := s.db.Query(`
+		select pj.jid, ps.subscription, ps.subscription_id
+		from pubsub_subscriptions ps
+		inner join pubsub_jids pj on ps.jid_id = pj.jid_id
+		where ps.node_id = ?;`, nodeId)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	defer rows.Close()
+
+	nodeSubscriptions := cached.NewNodeSubscriptions()
+	for rows.Next() {
+		var (
+			scanJid string
+			scanSub string
+			scanSubid string
+		)
+		err = rows.Scan(&scanJid, &scanSub, &scanSubid)
+		if err != nil {
+			return nil, err
+		}
+		saveJid, _ := jid.NewWithString(scanJid, false)
+		sub := enums.SubscriptionType(scanSub)
+		nodeSubscriptions.AddSubscription(*saveJid, sub, scanSubid)
+	}
+	nodeSubscriptions.SubscriptionsSaved()
+	return nodeSubscriptions, nil
+}
