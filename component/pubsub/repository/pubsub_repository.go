@@ -11,13 +11,13 @@ import (
 	"strings"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/module/xep0004"
-	"github.com/ortuman/jackal/component/pubsub/repository/stateless"
 )
 
 type pubSubRepository struct {
 	nodes      map[cached.NodeKey]*cached.Node
 	dao        _interface.IPubSubDao
 	nodesAdded int64
+	nodeSaver *nodeSaver
 }
 
 var instancePubSubRepository pubSubRepository
@@ -26,6 +26,7 @@ func Init(mysql string) {
 	instancePubSubRepository.nodes = make(map[cached.NodeKey]*cached.Node)
 	storage.InitStorage(mysql)
 	instancePubSubRepository.dao = storage.Instance()
+	instancePubSubRepository.nodeSaver = NewNodeSaver(instancePubSubRepository.dao)
 }
 
 func Repository() *pubSubRepository {
@@ -143,9 +144,8 @@ func (ps *pubSubRepository) getNode(serviceJid jid.JID, nodeName string) (*cache
 func (ps *pubSubRepository) UpdateNodeConfig(serviceJid jid.JID, nodeName string, nodeConfig base.AbstractNodeConfig) (error) {
 	node, err := ps.getNode(serviceJid, nodeName)
 	if err == nil && node != nil {
-		node.NodeConfig.Form().CopyValuesFromDataForm(nodeConfig.Form())
-
-		ps.dao.UpdateNodeConfig(serviceJid, node.GetNodeId(), nodeConfig.Form().Element().String(), 0)
+		node.ConfigCopyFrom(nodeConfig)
+		ps.nodeSaver.Save(node)
 	}
 	return nil
 }
@@ -174,13 +174,7 @@ func (ps *pubSubRepository) UpdateNodeAffiliations(serviceJid jid.JID, nodeName 
 			return fmt.Errorf("INCORRECT")
 		}
 
-		if node.GetNodeAffiliations().AffiliationsNeedsWriting() {
-			changedAffiliations := node.GetNodeAffiliations().GetChanged()
-			for _, changedAff := range changedAffiliations {
-				ps.updateOneNodeAffiliation(serviceJid, node.GetNodeId(), nodeName, changedAff)
-			}
-			node.GetNodeAffiliations().AffiliationsSaved()
-		}
+		ps.nodeSaver.Save(node)
 	}
 
 	return nil
@@ -194,33 +188,8 @@ func (ps *pubSubRepository) UpdateNodeSubscriptions(serviceJid jid.JID, nodeName
 			return fmt.Errorf("INCORRECT")
 		}
 
-		if node.GetNodeSubscriptions().SubscriptionsNeedsWriting() {
-			changedSubscriptions := node.GetNodeSubscriptions().GetChanged()
-			for _, changedSub := range changedSubscriptions {
-				ps.updateOneNodeSubscription(serviceJid, node.GetNodeId(), nodeName, changedSub)
-			}
-			node.GetNodeSubscriptions().SubscriptionsSaved()
-		}
+		ps.nodeSaver.Save(node)
 	}
 
-	return nil
-}
-
-// private method
-func (ps *pubSubRepository) updateOneNodeAffiliation(serviceJid jid.JID, nodeId int64, nodeName string, affiliation stateless.UsersAffiliation) (error) {
-	err := ps.dao.SetNodeAffiliation(serviceJid, nodeId, nodeName, affiliation)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// private method
-func (ps *pubSubRepository) updateOneNodeSubscription(serviceJid jid.JID, nodeId int64, nodeName string, subscriptions stateless.UsersSubscription) (error) {
-
-	err := ps.dao.SetNodeSubscription(serviceJid, nodeId, nodeName, subscriptions)
-	if err != nil {
-		return nil
-	}
 	return nil
 }

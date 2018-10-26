@@ -19,6 +19,7 @@ type Node struct {
 	ServiceJid        jid.JID
 	NodeConfig        base.AbstractNodeConfig
 
+	configNeedsWriting  bool
 	nodeId			int64
 	deleted           bool
 	nodeAffiliations  *NodeAffiliations
@@ -74,4 +75,17 @@ func (nd *Node) IsDeleted() bool {
 
 func (nd *Node) GetNodeId() int64 {
 	return nd.nodeId
+}
+
+func (nd *Node) IsConfigNeedsWriting() bool {
+	return nd.configNeedsWriting
+}
+
+func (nd *Node) ConfigSaved()  {
+	nd.configNeedsWriting = false
+}
+
+func (nd *Node) ConfigCopyFrom(newNodeConfig base.AbstractNodeConfig) {
+	nd.NodeConfig.Form().CopyValuesFromDataForm(newNodeConfig.Form())
+	nd.configNeedsWriting = true
 }
