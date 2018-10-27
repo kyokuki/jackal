@@ -14,3 +14,24 @@ type AbstractModule interface {
 	Process(stanza xmpp.Stanza, stm stream.C2S) *base.PubSubError
 	Features(toJID, fromJID *jid.JID, node string) ([]xep0030.Feature, *xmpp.StanzaError)
 }
+
+var subModules 	map[string]AbstractModule
+
+func AppendSubModule(modName string, modIns AbstractModule)  {
+	if subModules == nil {
+		subModules = make(map[string]AbstractModule)
+	}
+	subModules[modName] = modIns
+}
+
+func GetSubModules() map[string]AbstractModule {
+	return subModules
+}
+
+func GetModuleInstance(modName string) AbstractModule {
+	ins, ok := subModules[modName]
+	if ok {
+		return ins
+	}
+	return nil
+}

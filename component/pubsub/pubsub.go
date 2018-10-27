@@ -20,8 +20,6 @@ type PubSub struct {
 	discoInfo  *xep0030.DiscoInfo
 	actorCh    chan func()
 	shutdownCh <-chan struct{}
-
-	modules 	[]modules.AbstractModule
 }
 
 func New(cfg *Config, discoInfo *xep0030.DiscoInfo, shutdownCh <-chan struct{}) *PubSub {
@@ -39,10 +37,10 @@ func New(cfg *Config, discoInfo *xep0030.DiscoInfo, shutdownCh <-chan struct{}) 
 }
 
 func (c *PubSub)initModules()  {
-	c.modules = append(c.modules, &modules.DiscoveryModule{DiscoInfo: c.discoInfo})
-	c.modules = append(c.modules, &modules.NodeCreateModule{})
-	c.modules = append(c.modules, &modules.NodeConfigModule{})
-	c.modules = append(c.modules, &modules.NodeDeleteModule{})
+	modules.AppendSubModule("DiscoveryModule", &modules.DiscoveryModule{DiscoInfo: c.discoInfo})
+	modules.AppendSubModule("NodeCreateModule", &modules.NodeCreateModule{})
+	modules.AppendSubModule("NodeConfigModule", &modules.NodeConfigModule{})
+	modules.AppendSubModule("NodeDeleteModule", &modules.NodeDeleteModule{})
 }
 
 func (c *PubSub) Host() string {
@@ -88,7 +86,7 @@ func (c *PubSub) processStanza(stanza xmpp.Stanza, stm stream.C2S) {
 
 func (c *PubSub) process(stanza xmpp.Stanza, stm stream.C2S) bool {
 	handled := false
-	for _, mod := range c.modules {
+	for _, mod := range modules.GetSubModules() {
 		criteria := mod.ModuleCriteria()
 		if criteria != nil && criteria.Matches(stanza) {
 			handled = true
