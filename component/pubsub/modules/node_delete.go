@@ -5,7 +5,6 @@ import (
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/component/pubsub/repository"
-	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/ortuman/jackal/module/xep0030"
 )
@@ -88,35 +87,3 @@ func (s *NodeDeleteModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 	return nil
 }
 
-func (s *NodeDeleteModule) parseConf(nodeConfig base.AbstractNodeConfig, configure xmpp.XElement) error {
-	elementX := configure.Elements().ChildNamespace("x", "jabber:x:data")
-
-	if elementX != nil && "submit" == elementX.Attributes().Get("type") {
-		foo, err := xep0004.NewFormFromElement(elementX)
-		if err != nil {
-			return err
-		}
-
-		for _, itemField := range foo.Fields {
-			variable := itemField.Var
-
-
-			if variable == "pubsub#send_last_published_item" {
-				value := ""
-				if len(itemField.Values) > 0 {
-					value = itemField.Values[0]
-				}
-
-				// TODO
-				// "Requested on_sub_and_presence mode for sending last published item is disabled."
-				if value == "xxxxx" {
-
-				}
-			}
-
-			nodeConfig.Form().AddField(itemField)
-		}
-	}
-
-	return nil
-}
