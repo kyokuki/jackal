@@ -139,10 +139,9 @@ func (s *NodeConfigModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 		repository.Repository().UpdateNodeConfig(*toJID, nodeName, nodeConfig)
 
 		// TODO [pubsub#notify_config]
-		//_, notify_config := nodeConfig.Form().Field("pubsub#notify_config")
-		//if len(notify_config.Values) > 0 && notify_config.Values[0] == "1" {
-		//
-		//}
+		if nodeConfig.IsNotifyConfig() {
+
+		}
 
 	}
 

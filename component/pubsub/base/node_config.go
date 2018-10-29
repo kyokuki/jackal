@@ -11,6 +11,7 @@ const (
 
 type AbstractNodeConfig interface {
 	Form() *xep0004.DataForm
+	IsNotifyConfig() bool
 }
 
 type abstractNodeConfig struct {
@@ -108,4 +109,21 @@ func (af *abstractNodeConfig) initForm() {
 		"Notify subscribers when owner change their subscription or affiliation state"))
 	af.form.AddField(xep0004.NewFieldBool(PUBSUB+"presence_based_delivery", true,
 		"Whether to deliver notifications to available users only"))
+}
+
+
+func (af *abstractNodeConfig) IsNotifyConfig() bool {
+	_, notifyConfig := af.Form().Field("pubsub#notify_config")
+	if len(notifyConfig.Values) > 0 && notifyConfig.Values[0] == "1" {
+		return true
+	}
+	return false
+}
+
+func (af *abstractNodeConfig) GetNodeAccessModel() enums.AccessModelType {
+	_, accessModel := af.Form().Field("pubsub#access_model")
+	if len(accessModel.Values) > 0 {
+		return enums.AccessModelType(accessModel.Values[0])
+	}
+	return enums.AccessModelType("")
 }
