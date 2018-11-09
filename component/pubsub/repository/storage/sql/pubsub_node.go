@@ -177,7 +177,7 @@ func (s *Storage) SetNodeAffiliation(serviceJid jid.JID, nodeId int64, nodeName 
 	err = nil
 
 	if vJidId > 0 {
-		err = tx.QueryRow("select 1 from pubsub_affiliations pa where pa.node_id = ? and pa.jid_id = ?", nodeId, vJidId).Scan(vAffExist)
+		err = tx.QueryRow("select 1 from pubsub_affiliations pa where pa.node_id = ? and pa.jid_id = ?", nodeId, vJidId).Scan(&vAffExist)
 		if err == nil {
 			vAffExist = 1
 		} else if err == sql.ErrNoRows {
@@ -250,7 +250,7 @@ func (s *Storage) SetNodeSubscription(serviceJid jid.JID, nodeId int64, nodeName
 		return err
 	}
 	if vJidId > 0 {
-		err = tx.QueryRow("select 1  from pubsub_subscriptions where node_id = ? and jid_id = ?", nodeId, vJidId).Scan(vSubExist)
+		err = tx.QueryRow("select 1  from pubsub_subscriptions where node_id = ? and jid_id = ?", nodeId, vJidId).Scan(&vSubExist)
 		if err == nil {
 			vSubExist = 1
 		} else if err == sql.ErrNoRows {

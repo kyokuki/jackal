@@ -12,6 +12,7 @@ const (
 type AbstractNodeConfig interface {
 	Form() *xep0004.DataForm
 	IsNotifyConfig() bool
+	GetNodeAccessModel() enums.AccessModelType
 }
 
 type abstractNodeConfig struct {
