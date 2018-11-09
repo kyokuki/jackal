@@ -36,7 +36,7 @@ func (s *SubscribeNodeModule) Features(toJID, fromJID *jid.JID, node string) ([]
 		"http://jabber.org/protocol/pubsub#manage-subscriptions",
 		"http://jabber.org/protocol/pubsub#auto-subscribe",
 		"http://jabber.org/protocol/pubsub#subscribe",
-		"http://jabber.org/protocol/pubsub#subscription-notifications",
+		// TODO "http://jabber.org/protocol/pubsub#subscription-notifications",
 	}, nil
 }
 
@@ -111,16 +111,18 @@ func (s *SubscribeNodeModule) Process(packet xmpp.Stanza, stm stream.C2S) *base.
 		})
 	}
 
-	if (subscription == enums.SubscriptionPending && false) || // TODO : replace [false] with admin check of [!(config.isAdmin(senderJid)]
-		senderAffiliation.GetAffiliation() == enums.AffiliationOwner {
-		errElem1 := xmpp.NewElementNamespace("pending-subscription", "http://jabber.org/protocol/pubsub#errors")
+	if subscription != enums.SubscriptionNone {
+		if (subscription == enums.SubscriptionPending) && !(false || // TODO : replace [false] with admin check of [!(config.isAdmin(senderJid)]
+			senderAffiliation.GetAffiliation() == enums.AffiliationOwner) {
+			errElem1 := xmpp.NewElementNamespace("pending-subscription", "http://jabber.org/protocol/pubsub#errors")
 
-		errElem2 := xmpp.NewElementNamespace("text", "urn:ietf:params:xml:ns:xmpp-stanzas")
-		errElem2.SetText("Subscription is pending")
-		return base.NewPubSubErrorStanza(packet, xmpp.ErrForbidden, []xmpp.XElement{
-			errElem1,
-			errElem2,
-		})
+			errElem2 := xmpp.NewElementNamespace("text", "urn:ietf:params:xml:ns:xmpp-stanzas")
+			errElem2.SetText("Subscription is pending")
+			return base.NewPubSubErrorStanza(packet, xmpp.ErrForbidden, []xmpp.XElement{
+				errElem1,
+				errElem2,
+			})
+		}
 	}
 
 	accessModel := nodeConfig.GetNodeAccessModel()
