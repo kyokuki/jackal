@@ -196,3 +196,7 @@ func (ps *pubSubRepository) UpdateNodeSubscriptions(serviceJid jid.JID, nodeName
 func (ps *pubSubRepository)GetUserSubscriptions(serviceJid jid.JID, userJid jid.JID) (map[string]*cached.NodeSubscriptions, error) {
 	return ps.dao.GetUserSubscriptions(serviceJid, userJid)
 }
+
+func (ps *pubSubRepository)GetUserAffiliations(serviceJid jid.JID, userJid jid.JID) (map[string]*cached.NodeAffiliations, error) {
+	return ps.dao.GetUserAffiliations(serviceJid, userJid)
+}
