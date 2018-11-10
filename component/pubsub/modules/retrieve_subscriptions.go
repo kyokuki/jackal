@@ -79,6 +79,9 @@ func (s *RetrieveSubscriptionsModule) Process(packet xmpp.Stanza, stm stream.C2S
 		nodeSubscriptions := repository.Repository().GetNodeSubscriptions(*toJID.ToBareJID(), nodeName)
 		subscribers := nodeSubscriptions.GetSubscriptions()
 		for _, item := range subscribers {
+			if item.GetJid().ToBareJID().String() != fromJID.ToBareJID().String() {
+				continue
+			}
 			elemSub := xmpp.NewElementName("subscription")
 			elemSub.SetAttribute("node", nodeName)
 			elemSub.SetAttribute("jid", item.GetJid().String())
