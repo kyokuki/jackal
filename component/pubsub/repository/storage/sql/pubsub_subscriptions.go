@@ -43,7 +43,7 @@ func (s *Storage) GetUserSubscriptions(serviceJid jid.JID, userJid jid.JID) (map
 			resultMap[scanNodeName] = cached.NewNodeSubscriptions()
 		}
 		nodeSubscription, _ := resultMap[scanNodeName]
-		nodeSubscription.AddSubscription(userJid, enums.SubscriptionType(scanSubscription), scanSubid)
+		nodeSubscription.AddSubscription(userJid, enums.NewSubscriptionValue(scanSubscription), scanSubid)
 	}
 	return resultMap, nil
 }

@@ -301,7 +301,7 @@ func (s *Storage) GetNodeAffiliations(serviceJid jid.JID, nodeId int64) (*cached
 			return nil, err
 		}
 		saveJid, _ := jid.NewWithString(scanJid, false)
-		aff := enums.AffiliationType(scanAff)
+		aff := enums.NewAffiliationValue(scanAff)
 		nodeAffiliations.AddAffiliation(*saveJid, aff)
 	}
 	nodeAffiliations.AffiliationsSaved()
@@ -332,7 +332,7 @@ func (s *Storage) GetNodeSubscriptions(serviceJid jid.JID, nodeId int64) (*cache
 			return nil, err
 		}
 		saveJid, _ := jid.NewWithString(scanJid, false)
-		sub := enums.SubscriptionType(scanSub)
+		sub := enums.NewSubscriptionValue(scanSub)
 		nodeSubscriptions.AddSubscription(*saveJid, sub, scanSubid)
 	}
 	nodeSubscriptions.SubscriptionsSaved()

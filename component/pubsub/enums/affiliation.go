@@ -110,3 +110,20 @@ func (x AffiliationType) IsConfigureNode() bool {
 func (x AffiliationType) String() string {
 	return string(x)
 }
+
+func NewAffiliationValue(strSubscription string) AffiliationType {
+	switch strSubscription {
+	case "owner":
+		return AffiliationOwner
+	case "admin":
+		return AffiliationAdmin
+	case "member":
+		return AffiliationMember
+	case "none":
+		return AffiliationNone
+	case "outcast":
+		return AffiliationOutcast
+	default:
+		return AffiliationNone
+	}
+}

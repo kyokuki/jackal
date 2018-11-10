@@ -152,7 +152,7 @@ func (s *ManageSubscriptionsModule) processSet(packet xmpp.Stanza, stm stream.C2
 			continue
 		}
 
-		newSubscription := enums.SubscriptionType(strSubscription)
+		newSubscription := enums.NewSubscriptionValue(strSubscription)
 		oldSubscription := nodeSubscriptions.GetSubscription(*jid.ToBareJID())
 		if (oldSubscription == enums.SubscriptionNone) && (newSubscription != enums.SubscriptionNone) {
 			nodeSubscriptions.AddSubscriberJid(*jid.ToBareJID(), newSubscription)
