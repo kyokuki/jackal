@@ -192,3 +192,7 @@ func (ps *pubSubRepository) UpdateNodeSubscriptions(serviceJid jid.JID, nodeName
 
 	return nil
 }
+
+func (ps *pubSubRepository)GetUserSubscriptions(serviceJid jid.JID, userJid jid.JID) (map[string]*cached.NodeSubscriptions, error) {
+	return ps.dao.GetUserSubscriptions(serviceJid, userJid)
+}

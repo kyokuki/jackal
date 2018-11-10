@@ -112,7 +112,7 @@ func (s *SubscribeNodeModule) Process(packet xmpp.Stanza, stm stream.C2S) *base.
 	}
 
 	if subscription != enums.SubscriptionNone {
-		if (subscription == enums.SubscriptionPending) && !(false || // TODO : replace [false] with admin check of [!(config.isAdmin(senderJid)]
+		if (subscription == enums.SubscriptionPending) && !(false || // TODO : replace [false] with admin check of [config.isAdmin(senderJid)]
 			senderAffiliation.GetAffiliation() == enums.AffiliationOwner) {
 			errElem1 := xmpp.NewElementNamespace("pending-subscription", "http://jabber.org/protocol/pubsub#errors")
 

@@ -39,7 +39,7 @@ func (ns *NodeSubscriptions) GetSubscriptions() []stateless.UsersSubscription{
 	for _, sub := range ns.subs {
 		userSubs = append(userSubs, sub)
 	}
-	for _, changedSub := range ns.subs {
+	for _, changedSub := range ns.changedSubs {
 		userSubs = append(userSubs, changedSub)
 	}
 	return userSubs

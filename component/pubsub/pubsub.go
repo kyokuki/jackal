@@ -43,6 +43,7 @@ func (c *PubSub)initModules()  {
 	modules.AppendSubModule("NodeDeleteModule", &modules.NodeDeleteModule{})
 	modules.AppendSubModule("SubscribeNodeModule", &modules.SubscribeNodeModule{})
 	modules.AppendSubModule("UnsubscribeNodeModule", &modules.UnsubscribeNodeModule{})
+	modules.AppendSubModule("RetrieveSubscriptionsModule", &modules.RetrieveSubscriptionsModule{})
 }
 
 func (c *PubSub) Host() string {
