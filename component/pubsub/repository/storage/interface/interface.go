@@ -24,4 +24,5 @@ type IPubSubDao interface {
 	GetUserAffiliations(serviceJid jid.JID, userJid jid.JID) (map[string]*cached.NodeAffiliations, error)
 
 	GetItem(serviceJid jid.JID, nodeId int64, itemId string) (model.ItemMeta, error)
+	QueryItems(nodeId int64, orderDate bool, orderAsc bool, limit int64) ([]model.ItemMeta, error)
 }

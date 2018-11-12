@@ -10,6 +10,7 @@ import (
 	"github.com/ortuman/jackal/component/pubsub/utils"
 	"github.com/ortuman/jackal/component/pubsub/repository"
 	"log"
+	"strconv"
 )
 
 type RetrieveItemsModule struct{}
@@ -98,6 +99,32 @@ func (s *RetrieveItemsModule) Process(packet xmpp.Stanza, stm stream.C2S) *base.
 	} else {
 		// TODO
 		return base.NewPubSubErrorStanza(packet, xmpp.ErrFeatureNotImplemented, []xmpp.XElement{})
+
+		maxItemsStr := items.Attributes().Get("max_items")
+		var maxItemsCnt int
+		rsmGet := pubsub.Elements().ChildNamespace("set", "http://jabber.org/protocol/rsm")
+		if rsmGet != nil {
+
+		} else {
+			if maxItemsStr != "" {
+				maxItemsCnt, _ = strconv.Atoi(maxItemsStr)
+			}
+		}
+
+		itemArr, err := repository.Repository().QueryItems(*toJID.ToBareJID(), nodeName, int64(maxItemsCnt))
+		if err != nil {
+			log.Printf("pubsub node item retrieve error : %s", err.Error())
+		}
+
+		for _, loopItem := range itemArr {
+			p := xmpp.NewParser(strings.NewReader(loopItem.Data), xmpp.DefaultMode, 0)
+			payload, payloadErr := p.ParseElement()
+			if payloadErr != nil {
+				log.Printf("pubsub node item's payload error : %s", payloadErr.Error())
+				continue
+			}
+			itemsResult.AppendElement(payload)
+		}
 	}
 
 	pubSubResult.AppendElement(itemsResult)

@@ -210,3 +210,14 @@ func (ps *pubSubRepository)GetNodeItem(serviceJid jid.JID, nodeName string, item
 	return ps.dao.GetItem(serviceJid, node.GetNodeId(), itemId)
 }
 
+func (ps *pubSubRepository)QueryItems(serviceJid jid.JID, nodeName string, maxItems int64) ([]model.ItemMeta, error) {
+	node, err := ps.getNode(serviceJid, nodeName)
+	if err != nil {
+		return nil, err
+	}
+	if  maxItems == 0 {
+		maxItems = 10
+	}
+	return ps.dao.QueryItems(node.GetNodeId(), true, true, maxItems)
+}
+
