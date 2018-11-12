@@ -11,6 +11,7 @@ import (
 	"strings"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/module/xep0004"
+	"github.com/ortuman/jackal/component/pubsub/repository/storage/model"
 )
 
 type pubSubRepository struct {
@@ -200,3 +201,12 @@ func (ps *pubSubRepository)GetUserSubscriptions(serviceJid jid.JID, userJid jid.
 func (ps *pubSubRepository)GetUserAffiliations(serviceJid jid.JID, userJid jid.JID) (map[string]*cached.NodeAffiliations, error) {
 	return ps.dao.GetUserAffiliations(serviceJid, userJid)
 }
+
+func (ps *pubSubRepository)GetNodeItem(serviceJid jid.JID, nodeName string, itemId string) (model.ItemMeta, error) {
+	node, err := ps.getNode(serviceJid, nodeName)
+	if err != nil {
+		return model.ItemMeta{}, err
+	}
+	return ps.dao.GetItem(serviceJid, node.GetNodeId(), itemId)
+}
+

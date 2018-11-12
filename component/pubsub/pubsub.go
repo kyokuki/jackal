@@ -47,6 +47,7 @@ func (c *PubSub)initModules()  {
 	modules.AppendSubModule("ManageSubscriptionsModule", &modules.ManageSubscriptionsModule{})
 	modules.AppendSubModule("RetrieveAffiliationsModule", &modules.RetrieveAffiliationsModule{})
 	modules.AppendSubModule("ManageAffiliationsModule", &modules.ManageAffiliationsModule{})
+	modules.AppendSubModule("RetrieveItemsModule", &modules.RetrieveItemsModule{})
 }
 
 func (c *PubSub) Host() string {
