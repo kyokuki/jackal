@@ -13,6 +13,7 @@ type AbstractNodeConfig interface {
 	Form() *xep0004.DataForm
 	IsNotifyConfig() bool
 	GetNodeAccessModel() enums.AccessModelType
+	GetNodeType() enums.NodeType
 }
 
 type abstractNodeConfig struct {
@@ -127,4 +128,12 @@ func (af *abstractNodeConfig) GetNodeAccessModel() enums.AccessModelType {
 		return enums.AccessModelType(accessModel.Values[0])
 	}
 	return enums.AccessModelType("")
+}
+
+func (af *abstractNodeConfig) GetNodeType() enums.NodeType {
+	_, nodeType := af.Form().Field("pubsub#node_type")
+	if len(nodeType.Values) > 0 {
+		return enums.NewNodeType(nodeType.Values[0])
+	}
+	return enums.NewNodeType("")
 }
