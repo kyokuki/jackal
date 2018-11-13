@@ -9,6 +9,7 @@ import (
 	"github.com/ortuman/jackal/component/pubsub/repository"
 	"strings"
 	"github.com/ortuman/jackal/component/pubsub/enums"
+	"github.com/satori/go.uuid"
 )
 
 type PublishItemModule struct{}
@@ -73,9 +74,84 @@ func (s *PublishItemModule) Process(packet xmpp.Stanza, stm stream.C2S) *base.Pu
 		}
 	}
 
+	nodeAffiliations := repository.Repository().GetNodeAffiliations(*toJID, nodeName)
+	senderAffiliation := nodeAffiliations.GetSubscriberAffiliation(*fromJID)
+	nodeSubscriptions := repository.Repository().GetNodeSubscriptions(*toJID, nodeName)
+	senderSubscription := nodeSubscriptions.GetSubscription(*fromJID.ToBareJID())
+
+	publisherModel := nodeConfig.GetPublisherModel()
+
+	if !senderAffiliation.GetAffiliation().IsPublishItem() {
+		if publisherModel == enums.PublisherModelPublishers {
+			return base.NewPubSubErrorStanza(packet, xmpp.ErrForbidden, []xmpp.XElement{})
+		}
+
+		if publisherModel == enums.PublisherModelSubscribers && senderSubscription != enums.SubscriptionSubscribed {
+			return base.NewPubSubErrorStanza(packet, xmpp.ErrForbidden, []xmpp.XElement{})
+		}
+	}
+
+	itemsToSend := s.makeItemsToSend(publish)
+	leafNodeConfig, ok := nodeConfig.(*base.LeafNodeConfig)
+	if !ok {
+		return base.NewPubSubErrorStanza(packet, xmpp.ErrFeatureNotImplemented,
+			[]xmpp.XElement{
+				xmpp.NewElementNamespace("unsupported", "http://jabber.org/protocol/pubsub#errors"),
+			})
+	}
+
+	if leafNodeConfig.IsPersistItem() {
+		for i := 0; i < len(itemsToSend); i++ {
+			loopItem := itemsToSend[i].(*xmpp.Element)
+			itemId := loopItem.Attributes().Get("id")
+			if itemId == "" {
+				u1 := uuid.Must(uuid.NewV1())
+				itemId = strings.Replace(u1.String(), "-", "", -1)
+				loopItem.SetAttribute("id", itemId)
+			}
+
+			itemElem := xmpp.NewElementName("item")
+			itemElem.SetAttribute("id", itemId)
+			publishResult.AppendElement(itemElem)
+		}
+	}
 
 	pubSubResult.AppendElement(publishResult)
 	resultStanza.AppendElement(pubSubResult)
-	//stm.SendElement(resultStanza)
+	stm.SendElement(resultStanza)
+
+	s.doPublishItems(*toJID, nodeName, leafNodeConfig, *fromJID.ToBareJID(), itemsToSend)
 	return nil
+}
+
+func (s *PublishItemModule) makeItemsToSend(publishElem xmpp.XElement) []xmpp.XElement {
+	var itemArr []xmpp.XElement
+	for _, item := range publishElem.Elements().All() {
+		if "item" != item.Name() {
+			continue
+		}
+
+		expireAttr := item.Attributes().Get("expire-at")
+		if expireAttr != "" {
+
+		}
+
+		itemArr = append(itemArr, item)
+	}
+	return itemArr
+}
+
+func (s *PublishItemModule) doPublishItems(serviceJID jid.JID, nodeName string, leafNodeConfig *base.LeafNodeConfig, publisherJID jid.JID, itemsToSend []xmpp.XElement) {
+	if leafNodeConfig.IsPersistItem() {
+		for _, loopItem := range itemsToSend {
+			itemId := loopItem.Attributes().Get("id")
+			repository.Repository().WriteItem(serviceJID, nodeName, itemId, publisherJID, loopItem)
+		}
+
+		if leafNodeConfig.MaxItems() > 0 {
+			// TODO trim items
+		}
+	}
+
+	// TODO sendNotifications
 }

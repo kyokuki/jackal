@@ -14,32 +14,33 @@ type AbstractNodeConfig interface {
 	IsNotifyConfig() bool
 	GetNodeAccessModel() enums.AccessModelType
 	GetNodeType() enums.NodeType
+	GetPublisherModel() enums.PublisherModelType
 }
 
-type abstractNodeConfig struct {
+type NodeConfigType struct {
 	isInit   bool
 	form     xep0004.DataForm
 	nodeName string
 }
 
-func (af *abstractNodeConfig) Form() *xep0004.DataForm {
+func (af *NodeConfigType) Form() *xep0004.DataForm {
 	if !af.isInit {
 		af.init("default")
 	}
 	return &af.form
 }
 
-func (af *abstractNodeConfig) SetForm(form *xep0004.DataForm) {
+func (af *NodeConfigType) SetForm(form *xep0004.DataForm) {
 	af.form = *form
 }
 
-func (af *abstractNodeConfig) init(nodeName string) {
+func (af *NodeConfigType) init(nodeName string) {
 	af.nodeName = nodeName
 	af.initForm()
 	af.isInit = true
 }
 
-func (af *abstractNodeConfig) initForm() {
+func (af *NodeConfigType) initForm() {
 	af.form.Type = xep0004.Form
 
 	newField := xep0004.Field{}
@@ -114,7 +115,7 @@ func (af *abstractNodeConfig) initForm() {
 }
 
 
-func (af *abstractNodeConfig) IsNotifyConfig() bool {
+func (af *NodeConfigType) IsNotifyConfig() bool {
 	_, notifyConfig := af.Form().Field("pubsub#notify_config")
 	if len(notifyConfig.Values) > 0 && notifyConfig.Values[0] == "1" {
 		return true
@@ -122,7 +123,7 @@ func (af *abstractNodeConfig) IsNotifyConfig() bool {
 	return false
 }
 
-func (af *abstractNodeConfig) GetNodeAccessModel() enums.AccessModelType {
+func (af *NodeConfigType) GetNodeAccessModel() enums.AccessModelType {
 	_, accessModel := af.Form().Field("pubsub#access_model")
 	if len(accessModel.Values) > 0 {
 		return enums.AccessModelType(accessModel.Values[0])
@@ -130,10 +131,18 @@ func (af *abstractNodeConfig) GetNodeAccessModel() enums.AccessModelType {
 	return enums.AccessModelType("")
 }
 
-func (af *abstractNodeConfig) GetNodeType() enums.NodeType {
+func (af *NodeConfigType) GetNodeType() enums.NodeType {
 	_, nodeType := af.Form().Field("pubsub#node_type")
 	if len(nodeType.Values) > 0 {
 		return enums.NewNodeType(nodeType.Values[0])
 	}
 	return enums.NewNodeType("")
+}
+
+func (af *NodeConfigType) GetPublisherModel() enums.PublisherModelType {
+	_, nodeType := af.Form().Field("pubsub#publish_model")
+	if len(nodeType.Values) > 0 {
+		return enums.NewPublisherModelType(nodeType.Values[0])
+	}
+	return enums.NewPublisherModelType("")
 }

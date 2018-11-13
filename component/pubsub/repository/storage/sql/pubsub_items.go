@@ -33,7 +33,6 @@ func (s *Storage) GetItem(serviceJid jid.JID, nodeId int64, itemId string) (mode
 	return resultItemMeta, nil
 }
 
-
 func (s *Storage) QueryItems(nodeId int64, orderDate bool, orderAsc bool, limit int64) ([]model.ItemMeta, error) {
 	var err error
 	querySql := `
@@ -77,4 +76,41 @@ func (s *Storage) QueryItems(nodeId int64, orderDate bool, orderAsc bool, limit 
 		resultItemMetaArr = append(resultItemMetaArr, resultItemMeta)
 	}
 	return resultItemMetaArr, nil
+}
+
+func (s *Storage) WriteItem(serviceJid jid.JID, nodeId int64, nodeName string, itemId string, publisherJid jid.JID, itemData string) (error) {
+	var (
+		err    error
+		vJidId int64
+	)
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		} else {
+			if err != nil {
+				tx.Rollback()
+			}
+		}
+	}()
+
+	vJidId, err = s.privatePubSubEnsureJid(tx, publisherJid.ToBareJID().String())
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(`
+		insert into pubsub_items (node_id, id_sha1, id, creation_date, update_date, publisher_id, data)
+		values (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP(), ?, ?)`,
+		nodeId, s.Sha1(itemId), itemId, vJidId, itemData)
+	if err != nil {
+		return err
+	}
+
+	tx.Commit()
+	return nil
 }

@@ -6,11 +6,11 @@ import (
 )
 
 type LeafNodeConfig struct {
-	abstractNodeConfig
+	NodeConfigType
 }
 
 type CollectionNodeConfig struct {
-	abstractNodeConfig
+	NodeConfigType
 }
 
 type DefaultNodeConfig struct {

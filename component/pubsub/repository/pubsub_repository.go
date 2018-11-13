@@ -18,7 +18,7 @@ type pubSubRepository struct {
 	nodes      map[cached.NodeKey]*cached.Node
 	dao        _interface.IPubSubDao
 	nodesAdded int64
-	nodeSaver *nodeSaver
+	nodeSaver  *nodeSaver
 }
 
 var instancePubSubRepository pubSubRepository
@@ -194,15 +194,15 @@ func (ps *pubSubRepository) UpdateNodeSubscriptions(serviceJid jid.JID, nodeName
 	return nil
 }
 
-func (ps *pubSubRepository)GetUserSubscriptions(serviceJid jid.JID, userJid jid.JID) (map[string]*cached.NodeSubscriptions, error) {
+func (ps *pubSubRepository) GetUserSubscriptions(serviceJid jid.JID, userJid jid.JID) (map[string]*cached.NodeSubscriptions, error) {
 	return ps.dao.GetUserSubscriptions(serviceJid, userJid)
 }
 
-func (ps *pubSubRepository)GetUserAffiliations(serviceJid jid.JID, userJid jid.JID) (map[string]*cached.NodeAffiliations, error) {
+func (ps *pubSubRepository) GetUserAffiliations(serviceJid jid.JID, userJid jid.JID) (map[string]*cached.NodeAffiliations, error) {
 	return ps.dao.GetUserAffiliations(serviceJid, userJid)
 }
 
-func (ps *pubSubRepository)GetNodeItem(serviceJid jid.JID, nodeName string, itemId string) (model.ItemMeta, error) {
+func (ps *pubSubRepository) GetNodeItem(serviceJid jid.JID, nodeName string, itemId string) (model.ItemMeta, error) {
 	node, err := ps.getNode(serviceJid, nodeName)
 	if err != nil {
 		return model.ItemMeta{}, err
@@ -210,14 +210,21 @@ func (ps *pubSubRepository)GetNodeItem(serviceJid jid.JID, nodeName string, item
 	return ps.dao.GetItem(serviceJid, node.GetNodeId(), itemId)
 }
 
-func (ps *pubSubRepository)QueryItems(serviceJid jid.JID, nodeName string, maxItems int64) ([]model.ItemMeta, error) {
+func (ps *pubSubRepository) QueryItems(serviceJid jid.JID, nodeName string, maxItems int64) ([]model.ItemMeta, error) {
 	node, err := ps.getNode(serviceJid, nodeName)
 	if err != nil {
 		return nil, err
 	}
-	if  maxItems == 0 {
+	if maxItems == 0 {
 		maxItems = 10
 	}
 	return ps.dao.QueryItems(node.GetNodeId(), true, true, maxItems)
 }
 
+func (ps *pubSubRepository) WriteItem(serviceJid jid.JID, nodeName string, itemId string, publisherJid jid.JID, itemElem xmpp.XElement) (error) {
+	node, err := ps.getNode(serviceJid, nodeName)
+	if err != nil {
+		return err
+	}
+	return ps.dao.WriteItem(serviceJid, node.GetNodeId(), nodeName, itemId, publisherJid, itemElem.String())
+}

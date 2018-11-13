@@ -16,8 +16,8 @@ type IPubSubDao interface {
 	GetNodeMeta(serviceJid jid.JID, nodeName string) (*model.NodeMeta, error)
 	SetNodeAffiliation(serviceJid jid.JID, nodeId int64, nodeName string, affiliation stateless.UsersAffiliation) (error)
 	SetNodeSubscription(serviceJid jid.JID, nodeId int64, nodeName string, subscription stateless.UsersSubscription) (error)
-	GetNodeAffiliations(serviceJid jid.JID, nodeId int64) (*cached.NodeAffiliations ,error)
-	GetNodeSubscriptions(serviceJid jid.JID, nodeId int64) (*cached.NodeSubscriptions ,error)
+	GetNodeAffiliations(serviceJid jid.JID, nodeId int64) (*cached.NodeAffiliations, error)
+	GetNodeSubscriptions(serviceJid jid.JID, nodeId int64) (*cached.NodeSubscriptions, error)
 	DeleteNode(serviceJid jid.JID, nodeId int64) (error)
 
 	GetUserSubscriptions(serviceJid jid.JID, userJid jid.JID) (map[string]*cached.NodeSubscriptions, error)
@@ -25,4 +25,5 @@ type IPubSubDao interface {
 
 	GetItem(serviceJid jid.JID, nodeId int64, itemId string) (model.ItemMeta, error)
 	QueryItems(nodeId int64, orderDate bool, orderAsc bool, limit int64) ([]model.ItemMeta, error)
+	WriteItem(serviceJid jid.JID, nodeId int64, nodeName string, itemId string, publisherJid jid.JID, itemData string) (error)
 }
