@@ -80,9 +80,9 @@ func (s *ManageAffiliationsModule) Process(packet xmpp.Stanza, stm stream.C2S) *
 	}
 
 	if strings.ToLower(stanzaType) == "get" {
-		return s.processGet(packet, stm, nodeName, nodeAffiliations)
+		return s.processGet(packet, nodeName, nodeAffiliations)
 	} else if strings.ToLower(stanzaType) == "set" {
-		return s.processSet(packet, stm, nodeAffiliations)
+		return s.processSet(packet, nodeAffiliations)
 	} else {
 		return base.NewPubSubErrorStanza(packet, xmpp.ErrBadRequest, []xmpp.XElement{})
 	}
@@ -93,7 +93,7 @@ func (s *ManageAffiliationsModule) Process(packet xmpp.Stanza, stm stream.C2S) *
 	return nil
 }
 
-func (s *ManageAffiliationsModule) processGet(packet xmpp.Stanza, stm stream.C2S, nodeName string, nodeAffiliations *cached.NodeAffiliations) *base.PubSubError {
+func (s *ManageAffiliationsModule) processGet(packet xmpp.Stanza, nodeName string, nodeAffiliations *cached.NodeAffiliations) *base.PubSubError {
 	fromJID := packet.FromJID()
 	toJID := packet.ToJID().ToBareJID()
 	id := packet.ID()
@@ -120,11 +120,11 @@ func (s *ManageAffiliationsModule) processGet(packet xmpp.Stanza, stm stream.C2S
 
 	pubSubResult.AppendElement(affiliationsResult)
 	resultStanza.AppendElement(pubSubResult)
-	stm.SendElement(resultStanza)
+	GetStreamC2S().SendElement(resultStanza)
 	return nil
 }
 
-func (s *ManageAffiliationsModule) processSet(packet xmpp.Stanza, stm stream.C2S, nodeAffiliations *cached.NodeAffiliations) *base.PubSubError {
+func (s *ManageAffiliationsModule) processSet(packet xmpp.Stanza, nodeAffiliations *cached.NodeAffiliations) *base.PubSubError {
 	fromJID := packet.FromJID()
 	toJID := packet.ToJID().ToBareJID()
 	pubsub := packet.Elements().ChildNamespace("pubsub", "http://jabber.org/protocol/pubsub#owner")
@@ -175,7 +175,7 @@ func (s *ManageAffiliationsModule) processSet(packet xmpp.Stanza, stm stream.C2S
 	//	// do notify
 	//}
 
-	stm.SendElement(resultStanza)
+	GetStreamC2S().SendElement(resultStanza)
 	return nil
 }
 
