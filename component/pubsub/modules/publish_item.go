@@ -10,6 +10,9 @@ import (
 	"strings"
 	"github.com/ortuman/jackal/component/pubsub/enums"
 	"github.com/satori/go.uuid"
+	"github.com/ortuman/jackal/component/pubsub/repository/cached"
+	"github.com/ortuman/jackal/component/pubsub/utils"
+	"log"
 )
 
 type PublishItemModule struct{}
@@ -141,11 +144,15 @@ func (s *PublishItemModule) makeItemsToSend(publishElem xmpp.XElement) []xmpp.XE
 	return itemArr
 }
 
-func (s *PublishItemModule) doPublishItems(serviceJID jid.JID, nodeName string, leafNodeConfig *base.LeafNodeConfig, publisherJID jid.JID, itemsToSend []xmpp.XElement) {
+func (s *PublishItemModule) doPublishItems(serviceJID jid.JID, nodeName string, leafNodeConfig *base.LeafNodeConfig, publisherJID jid.JID, itemsToSend []xmpp.XElement) error {
 	if leafNodeConfig.IsPersistItem() {
 		for _, loopItem := range itemsToSend {
 			itemId := loopItem.Attributes().Get("id")
-			repository.Repository().WriteItem(serviceJID, nodeName, itemId, publisherJID, loopItem)
+			err := repository.Repository().WriteItem(serviceJID, nodeName, itemId, publisherJID, loopItem)
+			if err != nil {
+				log.Printf(s.Name() + " - Error processing publish packet - " + err.Error())
+				return err
+			}
 		}
 
 		if leafNodeConfig.MaxItems() > 0 {
@@ -153,5 +160,74 @@ func (s *PublishItemModule) doPublishItems(serviceJID jid.JID, nodeName string, 
 		}
 	}
 
-	// TODO sendNotifications
+	return s.SendNotificationsByItemsSlice(serviceJID, nodeName, itemsToSend)
+}
+
+func (s *PublishItemModule) SendNotificationsByItemsSlice(serviceJID jid.JID, nodeName string, itemsToSend []xmpp.XElement) error {
+	nodeAffiliations := repository.Repository().GetNodeAffiliations(serviceJID, nodeName)
+	nodeSubscriptions := repository.Repository().GetNodeSubscriptions(serviceJID, nodeName)
+
+	items := xmpp.NewElementName("items")
+	items.SetAttribute("node", nodeName)
+	for _, loopItem := range itemsToSend {
+		items.AppendElement(loopItem)
+	}
+
+	return s.SendNotificationsByItemElement(items, serviceJID, nodeName, nil,
+		repository.Repository().GetNodeConfig(serviceJID, nodeName), nodeAffiliations, nodeSubscriptions)
+}
+
+func (s *PublishItemModule) SendNotificationsByItemElement(
+	itemToSend xmpp.XElement,
+	fromJid jid.JID,
+	nodeName string,
+	headers map[string]string,
+	nodeConfig base.AbstractNodeConfig,
+	nodeAfffiliations *cached.NodeAffiliations,
+	nodeSubscriptions *cached.NodeSubscriptions,
+) error {
+
+	var subscriberJids []jid.JID
+	subscriberJids = s.GetActiveSubscribers(nodeConfig, nodeAfffiliations, nodeSubscriptions)
+
+	// TODO IsDeliverPresenceBased
+	if nodeConfig.IsDeliverPresenceBased() {
+
+	}
+
+	return s.SendNotificationsBySubscribers(subscriberJids, itemToSend, fromJid, nodeConfig, nodeName, headers)
+}
+
+func (s *PublishItemModule) SendNotificationsBySubscribers(
+	subscribers []jid.JID,
+	itemToSend xmpp.XElement,
+	fromJid jid.JID,
+	nodeConfig base.AbstractNodeConfig,
+	nodeName string,
+	headers map[string]string,
+) error {
+	for _, jid := range subscribers {
+		eleMessage := utils.DefaultPubSubLogic.PrepareNotificationMessage(fromJid, jid, "", itemToSend, headers)
+		packet := PacketInstance(eleMessage, fromJid, jid)
+		GetStreamC2S().SendElement(packet)
+	}
+	return nil
+}
+
+func (s *PublishItemModule) GetActiveSubscribers(nodeConfig base.AbstractNodeConfig, affiliations *cached.NodeAffiliations, subscriptions *cached.NodeSubscriptions) []jid.JID {
+	activeUserSubscribers := subscriptions.GetSubscriptionsForPublish()
+	var resultJIDs []jid.JID
+	for _, userSub := range activeUserSubscribers {
+		tmpJid := *userSub.GetJid()
+		affiliation := affiliations.GetSubscriberAffiliation(tmpJid)
+
+		if affiliation.GetAffiliation() != enums.AffiliationOutcast {
+			subscription := subscriptions.GetSubscription(tmpJid)
+			if subscription == enums.SubscriptionSubscribed {
+				resultJIDs = append(resultJIDs, tmpJid)
+			}
+		}
+	}
+
+	return resultJIDs
 }

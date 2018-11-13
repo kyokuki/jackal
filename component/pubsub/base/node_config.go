@@ -15,6 +15,7 @@ type AbstractNodeConfig interface {
 	GetNodeAccessModel() enums.AccessModelType
 	GetNodeType() enums.NodeType
 	GetPublisherModel() enums.PublisherModelType
+	IsDeliverPresenceBased() bool
 }
 
 type NodeConfigType struct {
@@ -145,4 +146,12 @@ func (af *NodeConfigType) GetPublisherModel() enums.PublisherModelType {
 		return enums.NewPublisherModelType(nodeType.Values[0])
 	}
 	return enums.NewPublisherModelType("")
+}
+
+func (af *NodeConfigType) IsDeliverPresenceBased() bool {
+	_, delivery := af.Form().Field("pubsub#presence_based_delivery")
+	if len(delivery.Values) > 0 && delivery.Values[0] == "1" {
+		return true
+	}
+	return false
 }

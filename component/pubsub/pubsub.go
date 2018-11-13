@@ -48,6 +48,7 @@ func (c *PubSub)initModules()  {
 	modules.AppendSubModule("RetrieveAffiliationsModule", &modules.RetrieveAffiliationsModule{})
 	modules.AppendSubModule("ManageAffiliationsModule", &modules.ManageAffiliationsModule{})
 	modules.AppendSubModule("RetrieveItemsModule", &modules.RetrieveItemsModule{})
+	modules.AppendSubModule("PublishItemModule", &modules.PublishItemModule{})
 }
 
 func (c *PubSub) Host() string {
@@ -92,6 +93,10 @@ func (c *PubSub) processStanza(stanza xmpp.Stanza, stm stream.C2S) {
 }
 
 func (c *PubSub) process(stanza xmpp.Stanza, stm stream.C2S) bool {
+	stmC2S := modules.GetStreamC2S()
+	if stmC2S == nil {
+		modules.InitStreamC2S(stm)
+	}
 	handled := false
 	for _, mod := range modules.GetSubModules() {
 		criteria := mod.ModuleCriteria()

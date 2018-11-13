@@ -15,7 +15,16 @@ type AbstractModule interface {
 	Features(toJID, fromJID *jid.JID, node string) ([]xep0030.Feature, *xmpp.StanzaError)
 }
 
+var streamC2S stream.C2S
 var subModules 	map[string]AbstractModule
+
+func InitStreamC2S(stm stream.C2S) {
+	streamC2S = stm
+}
+
+func GetStreamC2S() stream.C2S {
+	return streamC2S
+}
 
 func AppendSubModule(modName string, modIns AbstractModule)  {
 	if subModules == nil {
@@ -34,4 +43,14 @@ func GetModuleInstance(modName string) AbstractModule {
 		return ins
 	}
 	return nil
+}
+
+func PacketInstance(elem xmpp.XElement, stanzaFrom jid.JID, stanzaTo jid.JID) xmpp.XElement {
+	retElem, ok := elem.(*xmpp.Element)
+	if ok {
+		retElem.SetAttribute("from", stanzaFrom.String())
+		retElem.SetAttribute("to", stanzaTo.String())
+		return retElem
+	}
+	return elem
 }

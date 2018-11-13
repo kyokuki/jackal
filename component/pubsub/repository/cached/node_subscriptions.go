@@ -95,6 +95,10 @@ func (ns *NodeSubscriptions) GetSubscription(bareJid jid.JID)  enums.Subscriptio
 	return enums.SubscriptionNone
 }
 
+func (ns *NodeSubscriptions) GetSubscriptionsForPublish() []stateless.UsersSubscription {
+	return ns.GetSubscriptions()
+}
+
 func (ns *NodeSubscriptions) GetSubscriptionId(bareJid jid.JID)  string {
 	ns.mutex.RLock()
 	defer ns.mutex.RUnlock()

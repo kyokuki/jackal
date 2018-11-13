@@ -77,3 +77,25 @@ func (psl *privatePubSubLogic) CheckAccessPermission(packet xmpp.Stanza, service
 
 	return false, base.NewPubSubErrorStanza(packet, xmpp.ErrNotAuthorized, []xmpp.XElement{})
 }
+
+func (psl *privatePubSubLogic) PrepareNotificationMessage(fromJid jid.JID, toJid jid.JID, id string, itemToSend xmpp.XElement, headers map[string]string) xmpp.XElement {
+	elemMessage := xmpp.NewElementNamespace("message", "jabber:client")
+	elemMessage.SetAttribute("from", fromJid.String())
+	elemMessage.SetAttribute("to", toJid.String())
+	elemMessage.SetAttribute("id", id)
+	elemEvent := xmpp.NewElementNamespace("event", "http://jabber.org/protocol/pubsub#event")
+	elemEvent.AppendElement(itemToSend)
+	elemMessage.AppendElement(elemEvent)
+	if len(headers) > 0 {
+		elemHeader := xmpp.NewElementNamespace("headers", "http://jabber.org/protocol/shim")
+		for iKey, iVal := range headers {
+			h := xmpp.NewElementName("header")
+			h.SetAttribute("name", iKey)
+			h.SetText(iVal)
+			elemHeader.AppendElement(h)
+		}
+		elemMessage.AppendElement(elemHeader)
+	}
+
+	return elemMessage
+}
