@@ -82,7 +82,7 @@ func (s *RetrieveItemsModule) Process(packet xmpp.Stanza, stm stream.C2S) *base.
 
 	if len(requestedIds) > 0 {
 		for _, loopId := range requestedIds {
-			itemMeta, itemErr := repository.Repository().GetNodeItem(*toJID.ToBareJID(), nodeName, loopId)
+			itemMeta, itemErr := repository.Repository().GetItem(*toJID.ToBareJID(), nodeName, loopId)
 			if itemErr != nil {
 				log.Printf("pubsub node item retrieve error : %s", itemErr.Error())
 				continue

@@ -114,3 +114,29 @@ func (s *Storage) WriteItem(serviceJid jid.JID, nodeId int64, nodeName string, i
 	tx.Commit()
 	return nil
 }
+
+func (s *Storage) DeleteItem(serviceJid jid.JID, nodeId int64, itemId string) (error) {
+	var err error
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		} else {
+			if err != nil {
+				tx.Rollback()
+			}
+		}
+	}()
+
+	_, err = tx.Exec("delete from pubsub_items where node_id = ? and id_sha1 = ? and id = ?", nodeId, s.Sha1(itemId), itemId)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	return err
+}

@@ -26,4 +26,5 @@ type IPubSubDao interface {
 	GetItem(serviceJid jid.JID, nodeId int64, itemId string) (model.ItemMeta, error)
 	QueryItems(nodeId int64, orderDate bool, orderAsc bool, limit int64) ([]model.ItemMeta, error)
 	WriteItem(serviceJid jid.JID, nodeId int64, nodeName string, itemId string, publisherJid jid.JID, itemData string) (error)
+	DeleteItem(serviceJid jid.JID, nodeId int64, itemId string) (error)
 }

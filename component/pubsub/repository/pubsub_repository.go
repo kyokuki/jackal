@@ -202,7 +202,7 @@ func (ps *pubSubRepository) GetUserAffiliations(serviceJid jid.JID, userJid jid.
 	return ps.dao.GetUserAffiliations(serviceJid, userJid)
 }
 
-func (ps *pubSubRepository) GetNodeItem(serviceJid jid.JID, nodeName string, itemId string) (model.ItemMeta, error) {
+func (ps *pubSubRepository) GetItem(serviceJid jid.JID, nodeName string, itemId string) (model.ItemMeta, error) {
 	node, err := ps.getNode(serviceJid, nodeName)
 	if err != nil {
 		return model.ItemMeta{}, err
@@ -227,4 +227,12 @@ func (ps *pubSubRepository) WriteItem(serviceJid jid.JID, nodeName string, itemI
 		return err
 	}
 	return ps.dao.WriteItem(serviceJid, node.GetNodeId(), nodeName, itemId, publisherJid, itemElem.String())
+}
+
+func (ps *pubSubRepository) DeleteItem(serviceJid jid.JID, nodeName string, itemId string) (error) {
+	node, err := ps.getNode(serviceJid, nodeName)
+	if err != nil {
+		return err
+	}
+	return ps.dao.DeleteItem(serviceJid, node.GetNodeId(), itemId)
 }
