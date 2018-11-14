@@ -84,6 +84,11 @@ func (s *DiscoveryModule) processDiscoInfo(stanza xmpp.XElement, stm stream.C2S)
 	resultIq.SetFrom(toJID.String())
 	resultQuery := xmpp.NewElementNamespace("query", "http://jabber.org/protocol/disco#info")
 
+	nodeMeta, _ := repository.Repository().GetNodeMeta(*toJID.ToBareJID(), nodeName)
+	if nodeMeta == nil {
+		return base.NewPubSubErrorStanza(stan, xmpp.ErrItemNotFound, nil)
+	}
+
 	nodeConfig := repository.Repository().GetNodeConfig(*toJID, nodeName)
 	if nodeConfig == nil {
 		return base.NewPubSubErrorStanza(stan, xmpp.ErrItemNotFound, nil)
@@ -108,8 +113,8 @@ func (s *DiscoveryModule) processDiscoInfo(stanza xmpp.XElement, stm stream.C2S)
 	}
 	clonedForm.AddField(xep0004.NewFieldJidMulti("pubsub#owner", owners, "Node owners"))
 	clonedForm.AddField(xep0004.NewFieldJidMulti("pubsub#publisher", publishers, "Publishers to this node"))
-	clonedForm.AddField(xep0004.NewFieldJidSingle("pubsub#creator", "", "Node creator")) // TODO
-	clonedForm.AddField(xep0004.NewFieldJidSingle("pubsub#creation_date", "", "Creation date")) // TODO
+	clonedForm.AddField(xep0004.NewFieldJidSingle("pubsub#creator", nodeMeta.Creator, "Node creator")) // TODO
+	clonedForm.AddField(xep0004.NewFieldJidSingle("pubsub#creation_date", nodeMeta.CreateDate.Format("2006-01-02T15:04:05Z"), "Creation date")) // TODO
 
 	elemIdentity := xmpp.NewElementName("identity")
 	elemIdentity.SetAttribute("category", "pubsub")

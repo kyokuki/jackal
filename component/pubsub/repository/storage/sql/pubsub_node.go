@@ -132,14 +132,14 @@ func (s *Storage) UpdateNodeConfig(jid jid.JID, nodeId int64, serializedData str
 func (s *Storage) GetNodeMeta(serviceJid jid.JID, nodeName string) (*model.NodeMeta, error) {
 	var nodeMetaVar model.NodeMeta
 	err := s.db.QueryRow(`
-		select n.node_id, n.configuration, cj.jid, n.creation_date
+		select n.node_id, n.name, n.configuration, cj.jid, n.creation_date
 		from pubsub_nodes n
 		inner join pubsub_service_jids sj on n.service_id = sj.service_id
 		inner join pubsub_jids cj on cj.jid_id = n.creator_id
 		where sj.service_jid_sha1 = ? and n.name_sha1 = ?
 			and sj.service_jid = ? and n.name = ? `,
 		s.Sha1(serviceJid.String()), s.Sha1(nodeName), serviceJid.String(), nodeName).
-		Scan(&nodeMetaVar.NodeId, &nodeMetaVar.NodeConfig, &nodeMetaVar.Creator, &nodeMetaVar.CreateDate)
+		Scan(&nodeMetaVar.NodeId, &nodeMetaVar.Name, &nodeMetaVar.NodeConfig, &nodeMetaVar.Creator, &nodeMetaVar.CreateDate)
 	if err != nil {
 		return nil, err
 	}

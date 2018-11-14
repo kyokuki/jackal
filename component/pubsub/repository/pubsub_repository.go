@@ -141,6 +141,15 @@ func (ps *pubSubRepository) getNode(serviceJid jid.JID, nodeName string) (*cache
 	return &newNode, nil
 }
 
+func (ps *pubSubRepository) GetNodeMeta(serviceJid jid.JID, nodeName string) (*model.NodeMeta, error) {
+	nodeMeta, err := ps.dao.GetNodeMeta(serviceJid, nodeName)
+	if err != nil {
+		return nil, err
+	}
+	return nodeMeta, nil
+}
+
+
 func (ps *pubSubRepository) UpdateNodeConfig(serviceJid jid.JID, nodeName string, nodeConfig base.AbstractNodeConfig) (error) {
 	node, err := ps.getNode(serviceJid, nodeName)
 	if err == nil && node != nil {
