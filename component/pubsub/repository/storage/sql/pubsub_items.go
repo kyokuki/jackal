@@ -10,7 +10,7 @@ import (
 func (s *Storage) GetItem(serviceJid jid.JID, nodeId int64, itemId string) (model.ItemMeta, error) {
 	var err error
 	rows, err := s.db.Query(`
-		select pn.name, pi.node_id, pi.data, pj.jid, pi.creation_date, pi.update_date
+		select pn.name, pi.node_id, pi.id, pi.data, pj.jid, pi.creation_date, pi.update_date
 		from pubsub_items pi
 		inner join pubsub_jids pj on pj.jid_id = pi.publisher_id
     	inner join pubsub_nodes pn on pn.node_id = pi.node_id
@@ -25,7 +25,8 @@ func (s *Storage) GetItem(serviceJid jid.JID, nodeId int64, itemId string) (mode
 
 	var resultItemMeta model.ItemMeta
 	for rows.Next() {
-		err = rows.Scan(&resultItemMeta.NodeName, &resultItemMeta.NodeId, &resultItemMeta.Data, &resultItemMeta.Jid, &resultItemMeta.CreateDate, &resultItemMeta.UpdateDate)
+		err = rows.Scan(&resultItemMeta.NodeName, &resultItemMeta.NodeId, &resultItemMeta.Id, &resultItemMeta.Data,
+			&resultItemMeta.Jid, &resultItemMeta.CreateDate, &resultItemMeta.UpdateDate)
 		if err != nil {
 			return model.ItemMeta{}, err
 		}
@@ -36,7 +37,7 @@ func (s *Storage) GetItem(serviceJid jid.JID, nodeId int64, itemId string) (mode
 func (s *Storage) QueryItems(nodeId int64, orderDate bool, orderAsc bool, limit int64) ([]model.ItemMeta, error) {
 	var err error
 	querySql := `
-		select pn.name, pi.node_id, pi.data, pj.jid, pi.creation_date, pi.update_date
+		select pn.name, pi.node_id, pi.id, pi.data, pj.jid, pi.creation_date, pi.update_date
 		from pubsub_items pi
 		inner join pubsub_jids pj on pj.jid_id = pi.publisher_id
     	inner join pubsub_nodes pn on pn.node_id = pi.node_id
@@ -69,7 +70,8 @@ func (s *Storage) QueryItems(nodeId int64, orderDate bool, orderAsc bool, limit 
 	var resultItemMetaArr []model.ItemMeta
 	for rows.Next() {
 		var resultItemMeta model.ItemMeta
-		err = rows.Scan(&resultItemMeta.NodeName, &resultItemMeta.NodeId, &resultItemMeta.Data, &resultItemMeta.Jid, &resultItemMeta.CreateDate, &resultItemMeta.UpdateDate)
+		err = rows.Scan(&resultItemMeta.NodeName, &resultItemMeta.NodeId, &resultItemMeta.Id, &resultItemMeta.Data,
+			&resultItemMeta.Jid, &resultItemMeta.CreateDate, &resultItemMeta.UpdateDate)
 		if err != nil {
 			return nil, err
 		}
@@ -139,4 +141,33 @@ func (s *Storage) DeleteItem(serviceJid jid.JID, nodeId int64, itemId string) (e
 
 	err = tx.Commit()
 	return err
+}
+
+func (s *Storage) GetItemIds(nodeId int64) ([]string, error) {
+	var err error
+	querySql := `
+		select pn.name, pi.node_id, pi.id, pi.data, pj.jid, pi.creation_date, pi.update_date
+		from pubsub_items pi
+		inner join pubsub_jids pj on pj.jid_id = pi.publisher_id
+    	inner join pubsub_nodes pn on pn.node_id = pi.node_id
+		where pi.node_id = ? `
+
+	var rows *sql.Rows
+	rows, err = s.db.Query(querySql, nodeId)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var idsArr []string
+	for rows.Next() {
+		var resultItemMeta model.ItemMeta
+		err = rows.Scan(&resultItemMeta.NodeName, &resultItemMeta.NodeId, &resultItemMeta.Id, &resultItemMeta.Data,
+			&resultItemMeta.Jid, &resultItemMeta.CreateDate, &resultItemMeta.UpdateDate)
+		if err != nil {
+			return nil, err
+		}
+		idsArr = append(idsArr, resultItemMeta.Id)
+	}
+	return idsArr, nil
 }

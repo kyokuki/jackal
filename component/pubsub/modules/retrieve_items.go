@@ -97,9 +97,6 @@ func (s *RetrieveItemsModule) Process(packet xmpp.Stanza, stm stream.C2S) *base.
 			itemsResult.AppendElement(payload)
 		}
 	} else {
-		// TODO
-		return base.NewPubSubErrorStanza(packet, xmpp.ErrFeatureNotImplemented, []xmpp.XElement{})
-
 		maxItemsStr := items.Attributes().Get("max_items")
 		var maxItemsCnt int
 		rsmGet := pubsub.Elements().ChildNamespace("set", "http://jabber.org/protocol/rsm")

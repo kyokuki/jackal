@@ -236,3 +236,11 @@ func (ps *pubSubRepository) DeleteItem(serviceJid jid.JID, nodeName string, item
 	}
 	return ps.dao.DeleteItem(serviceJid, node.GetNodeId(), itemId)
 }
+
+func (ps *pubSubRepository) GetItemIds(serviceJid jid.JID, nodeName string) ([]string, error) {
+	node, err := ps.getNode(serviceJid, nodeName)
+	if err != nil {
+		return nil, err
+	}
+	return ps.dao.GetItemIds(node.GetNodeId())
+}
