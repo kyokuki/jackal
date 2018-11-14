@@ -16,6 +16,8 @@ type AbstractNodeConfig interface {
 	GetNodeType() enums.NodeType
 	GetPublisherModel() enums.PublisherModelType
 	IsDeliverPresenceBased() bool
+
+	Clone() AbstractNodeConfig
 }
 
 type NodeConfigType struct {
@@ -154,4 +156,17 @@ func (af *NodeConfigType) IsDeliverPresenceBased() bool {
 		return true
 	}
 	return false
+}
+
+func (af *NodeConfigType) Clone() AbstractNodeConfig {
+	var ins AbstractNodeConfig
+	if af.GetNodeType() == enums.Leaf {
+		ins = NewLeafNodeConfig(af.nodeName)
+	} else if af.GetNodeType() == enums.Collection {
+		ins = NewCollectionNodeConfig(af.nodeName)
+	} else {
+		ins = NewLeafNodeConfig(af.nodeName)
+	}
+	ins.Form().CopyValuesFromDataForm(af.Form())
+	return ins
 }

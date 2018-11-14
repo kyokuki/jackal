@@ -4,7 +4,7 @@ type AffiliationType string
 
 const (
 	AffiliationOwner   = AffiliationType("owner")
-	AffiliationAdmin   = AffiliationType("admin")
+	AffiliationPublisher   = AffiliationType("publisher")
 	AffiliationMember  = AffiliationType("member")
 	AffiliationNone    = AffiliationType("none")
 	AffiliationOutcast = AffiliationType("outcast")
@@ -22,7 +22,7 @@ type affiliationPrivileges struct {
 }
 
 var affiliations struct {
-	admin   affiliationPrivileges
+	publisher   affiliationPrivileges
 	member  affiliationPrivileges
 	none    affiliationPrivileges
 	outcast affiliationPrivileges
@@ -30,7 +30,7 @@ var affiliations struct {
 }
 
 func init() {
-	affiliations.admin = newAffiliationPrivileges(3, true, true, true, true, false, false, false)
+	affiliations.publisher = newAffiliationPrivileges(3, true, true, true, true, false, false, false)
 	affiliations.member = newAffiliationPrivileges(2, true, true, false, false, false, false, false)
 	affiliations.none = newAffiliationPrivileges(1, true, false, false, false, false, false, false)
 	affiliations.outcast = newAffiliationPrivileges(0, false, false, false, false, false, false, false)
@@ -61,8 +61,8 @@ func newAffiliationPrivileges(
 
 func (x AffiliationType) privileges() affiliationPrivileges {
 	switch x {
-	case AffiliationAdmin:
-		return affiliations.admin
+	case AffiliationPublisher:
+		return affiliations.publisher
 	case AffiliationMember:
 		return affiliations.member
 	case AffiliationNone:
@@ -116,7 +116,7 @@ func NewAffiliationValue(strSubscription string) AffiliationType {
 	case "owner":
 		return AffiliationOwner
 	case "admin":
-		return AffiliationAdmin
+		return AffiliationPublisher
 	case "member":
 		return AffiliationMember
 	case "none":

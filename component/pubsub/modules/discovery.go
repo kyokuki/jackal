@@ -7,6 +7,10 @@ import (
 	"fmt"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/ortuman/jackal/module/xep0030"
+	"strings"
+	"github.com/ortuman/jackal/component/pubsub/repository"
+	"github.com/ortuman/jackal/module/xep0004"
+	"github.com/ortuman/jackal/component/pubsub/enums"
 )
 
 type DiscoveryModule struct{
@@ -34,8 +38,7 @@ func (s *DiscoveryModule) ModuleCriteria() *base.ElementCriteria {
 }
 
 func (s *DiscoveryModule) Features(toJID, fromJID *jid.JID, node string) ([]xep0030.Feature, *xmpp.StanzaError) {
-	return []xep0030.Feature{
-	}, nil
+	return []xep0030.Feature{}, nil
 }
 
 func (s *DiscoveryModule) Process(stanza xmpp.Stanza, stm stream.C2S) *base.PubSubError {
@@ -73,11 +76,50 @@ func (s *DiscoveryModule) processDiscoInfo(stanza xmpp.XElement, stm stream.C2S)
 	stan := stanza.(xmpp.Stanza)
 	fromJID := stan.FromJID()
 	toJID := stan.ToJID()
+	query := stan.Elements().ChildNamespace("query", "http://jabber.org/protocol/disco#info")
+	nodeName := strings.Trim(query.Attributes().Get("node"), " ")
 
 	resultIq := xmpp.NewElementName(stanza.Name())
 	resultIq.SetTo(fromJID.String())
 	resultIq.SetFrom(toJID.String())
 	resultQuery := xmpp.NewElementNamespace("query", "http://jabber.org/protocol/disco#info")
+
+	nodeConfig := repository.Repository().GetNodeConfig(*toJID, nodeName)
+	if nodeConfig == nil {
+		return base.NewPubSubErrorStanza(stan, xmpp.ErrItemNotFound, nil)
+	}
+	clonedNodeConfig := nodeConfig.Clone()
+	clonedForm := clonedNodeConfig.Form()
+	clonedForm.AddField(xep0004.NewFieldHidden("FORM_TYPE", "http://jabber.org/protocol/pubsub#meta-data"))
+
+	var owners []string
+	var publishers [] string
+
+	affiliations := repository.Repository().GetNodeAffiliations(*toJID.ToBareJID(), nodeName)
+	for _, userAff := range affiliations.GetAffiliations() {
+		switch userAff.GetAffiliation() {
+		case enums.AffiliationOwner:
+			owners = append(owners, userAff.GetJid().String())
+		case enums.AffiliationPublisher:
+			publishers = append(publishers, userAff.GetJid().String())
+		default:
+			// do nothing
+		}
+	}
+	clonedForm.AddField(xep0004.NewFieldJidMulti("pubsub#owner", owners, "Node owners"))
+	clonedForm.AddField(xep0004.NewFieldJidMulti("pubsub#publisher", publishers, "Publishers to this node"))
+	clonedForm.AddField(xep0004.NewFieldJidSingle("pubsub#creator", "", "Node creator")) // TODO
+	clonedForm.AddField(xep0004.NewFieldJidSingle("pubsub#creation_date", "", "Creation date")) // TODO
+
+	elemIdentity := xmpp.NewElementName("identity")
+	elemIdentity.SetAttribute("category", "pubsub")
+	elemIdentity.SetAttribute("type", clonedNodeConfig.GetNodeType().String())
+	elemFeature := xmpp.NewElementName("feature ")
+	elemFeature.SetAttribute("var", "http://jabber.org/protocol/pubsub")
+
+	resultQuery.AppendElement(elemIdentity)
+	resultQuery.AppendElement(elemFeature)
+	resultQuery.AppendElement(clonedForm.Element())
 
 	resultIq.AppendElement(resultQuery)
 	stm.SendElement(resultIq)
