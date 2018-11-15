@@ -13,3 +13,20 @@ const (
 func (x AccessModelType) String() string {
 	return string(x)
 }
+
+func NewAccessModelType(strAccess string) AccessModelType {
+	switch strAccess {
+	case "authorize":
+		return AccessModelAuthorize
+	case "open":
+		return AccessModelOpen
+	case "presence":
+		return AccessModelPresence
+	case "roster":
+		return AccessModelRoster
+	case "whitelist":
+		return AccessModelWhitelist
+	default:
+		return AccessModelType("")
+	}
+}
