@@ -7,6 +7,7 @@ import (
 	"github.com/ortuman/jackal/component/pubsub/repository"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/ortuman/jackal/module/xep0030"
+	"log"
 )
 
 
@@ -72,11 +73,22 @@ func (s *NodeDeleteModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 		}
 	}
 
-	// TODO [pubsub#notify_config]
-	//_, notify_config := nodeConfig.Form().Field("pubsub#notify_config")
-	//if len(notify_config.Values) > 0 && notify_config.Values[0] == "1" {
-	//
-	//}
+	if nodeConfig.IsNotifyConfig() {
+		publishModule := GetModuleInstance("PublishItemModule")
+		if publishModule != nil {
+			publishModuleIns, ok := publishModule.(*PublishItemModule)
+			if ok {
+				elemDel := xmpp.NewElementName("delete")
+				elemDel.SetAttribute("node", nodeName)
+				tmpNodeSubscriptions := repository.Repository().GetNodeSubscriptions(*toJID.ToBareJID(), nodeName)
+				publishModuleIns.SendNotificationsByItemElement(elemDel, *toJID.ToBareJID(), nodeName, nil, nodeConfig, tmpNodeAffiliations, tmpNodeSubscriptions)
+			} else {
+				log.Printf("PublishItemModule Instance not found")
+			}
+		} else {
+			log.Printf("PublishItemModule Instance not found")
+		}
+	}
 
 	// TODO collection node
 	// if this node has a parent node, then remove this node from the parent node

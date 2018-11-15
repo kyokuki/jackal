@@ -9,6 +9,7 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/component/pubsub/enums"
+	"log"
 )
 
 
@@ -133,16 +134,26 @@ func (s *NodeConfigModule)Process(packet xmpp.Stanza, stm stream.C2S) *base.PubS
 
 		s.parseConf(nodeConfig, configure)
 
-		// TODO
-		// collection node should update its child nodes
+		// TODO collection node should update its child nodes
 
 		repository.Repository().UpdateNodeConfig(*toJID, nodeName, nodeConfig)
 
-		// TODO [pubsub#notify_config]
 		if nodeConfig.IsNotifyConfig() {
-
+			publishModule := GetModuleInstance("PublishItemModule")
+			if publishModule != nil {
+				publishModuleIns, ok := publishModule.(*PublishItemModule)
+				if ok {
+					elemConfiguration := xmpp.NewElementName("configuration")
+					elemConfiguration.SetAttribute("node", nodeName)
+					tmpNodeSubscriptions := repository.Repository().GetNodeSubscriptions(*toJID.ToBareJID(), nodeName)
+					publishModuleIns.SendNotificationsByItemElement(elemConfiguration, *toJID.ToBareJID(), nodeName, nil, nodeConfig, tmpNodeAffiliations, tmpNodeSubscriptions)
+				} else {
+					log.Printf("PublishItemModule Instance not found")
+				}
+			} else {
+				log.Printf("PublishItemModule Instance not found")
+			}
 		}
-
 	}
 
 	stm.SendElement(resultStanza)
