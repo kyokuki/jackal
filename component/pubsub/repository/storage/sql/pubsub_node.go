@@ -376,3 +376,63 @@ func (s *Storage) DeleteNode(serviceJid jid.JID, nodeId int64) (error) {
 	err = tx.Commit()
 	return err
 }
+
+func (s *Storage) GetChildNodes(serviceJid jid.JID, nodeName string) ([]string, error) {
+	if nodeName == "" {
+		return s.privateGetRootNodes(serviceJid)
+	}
+	return s.privateGetChildNodes(serviceJid, nodeName)
+}
+
+func (s *Storage) privateGetChildNodes(serviceJid jid.JID, nodeName string) ([]string, error) {
+	var err error
+
+	rows, err := s.db.Query(`
+		select n.node_id, n.name, n.configuration, cj.jid, n.creation_date
+		from pubsub_nodes n
+		inner join pubsub_service_jids sj on n.service_id = sj.service_id
+		inner join pubsub_nodes p on p.node_id = n.collection_id and p.service_id = sj.service_id
+		inner join pubsub_jids cj on cj.jid_id = n.creator_id
+		where sj.service_jid = ? and p.name = ?`, serviceJid.ToBareJID().String(), nodeName)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var nodeArr []string
+	for rows.Next() {
+		var nodeMeta model.NodeMeta
+		err = rows.Scan(&nodeMeta.NodeId, &nodeMeta.Name, &nodeMeta.NodeConfig, &nodeMeta.Creator, &nodeMeta.CreateDate)
+		if err != nil {
+			return nil, err
+		}
+		nodeArr = append(nodeArr, nodeMeta.Name)
+	}
+	return nodeArr, nil
+}
+
+func (s *Storage) privateGetRootNodes(serviceJid jid.JID) ([]string, error) {
+	var err error
+
+	rows, err := s.db.Query(`
+		select n.node_id, n.name, n.configuration, cj.jid, n.creation_date
+		from pubsub_nodes n
+		inner join pubsub_service_jids sj on n.service_id = sj.service_id
+		inner join pubsub_jids cj on cj.jid_id = n.creator_id
+		where sj.service_jid = ? and (n.collection_id is null or n.collection_id = 0)`, serviceJid.ToBareJID().String())
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var nodeArr []string
+	for rows.Next() {
+		var nodeMeta model.NodeMeta
+		err = rows.Scan(&nodeMeta.NodeId, &nodeMeta.Name, &nodeMeta.NodeConfig, &nodeMeta.Creator, &nodeMeta.CreateDate)
+		if err != nil {
+			return nil, err
+		}
+		nodeArr = append(nodeArr, nodeMeta.Name)
+	}
+	return nodeArr, nil
+}

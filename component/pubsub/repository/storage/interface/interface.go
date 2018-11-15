@@ -19,6 +19,7 @@ type IPubSubDao interface {
 	GetNodeAffiliations(serviceJid jid.JID, nodeId int64) (*cached.NodeAffiliations, error)
 	GetNodeSubscriptions(serviceJid jid.JID, nodeId int64) (*cached.NodeSubscriptions, error)
 	DeleteNode(serviceJid jid.JID, nodeId int64) (error)
+	GetChildNodes(serviceJid jid.JID, nodeName string) ([]string, error)
 
 	GetUserSubscriptions(serviceJid jid.JID, userJid jid.JID) (map[string]*cached.NodeSubscriptions, error)
 	GetUserAffiliations(serviceJid jid.JID, userJid jid.JID) (map[string]*cached.NodeAffiliations, error)

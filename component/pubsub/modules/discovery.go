@@ -11,6 +11,7 @@ import (
 	"github.com/ortuman/jackal/component/pubsub/repository"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/component/pubsub/enums"
+	"log"
 )
 
 type DiscoveryModule struct{
@@ -49,7 +50,7 @@ func (s *DiscoveryModule) Process(stanza xmpp.Stanza, stm stream.C2S) *base.PubS
 	node := query.Attributes().Get("node")
 	xmlns := query.Namespace()
 
-	if node == "" {
+	if node == "" && xmlns == "http://jabber.org/protocol/disco#info"{
 		fmt.Println(xmlns)
 		switch stanza := stanza.(type) {
 		case *xmpp.IQ:
@@ -78,10 +79,13 @@ func (s *DiscoveryModule) processDiscoInfo(stanza xmpp.XElement, stm stream.C2S)
 	toJID := stan.ToJID()
 	query := stan.Elements().ChildNamespace("query", "http://jabber.org/protocol/disco#info")
 	nodeName := strings.Trim(query.Attributes().Get("node"), " ")
+	id := stanza.ID()
 
 	resultIq := xmpp.NewElementName(stanza.Name())
 	resultIq.SetTo(fromJID.String())
 	resultIq.SetFrom(toJID.String())
+	resultIq.SetAttribute("id", id)
+	resultIq.SetAttribute("type", "result")
 	resultQuery := xmpp.NewElementNamespace("query", "http://jabber.org/protocol/disco#info")
 
 	nodeMeta, _ := repository.Repository().GetNodeMeta(*toJID.ToBareJID(), nodeName)
@@ -113,8 +117,8 @@ func (s *DiscoveryModule) processDiscoInfo(stanza xmpp.XElement, stm stream.C2S)
 	}
 	clonedForm.AddField(xep0004.NewFieldJidMulti("pubsub#owner", owners, "Node owners"))
 	clonedForm.AddField(xep0004.NewFieldJidMulti("pubsub#publisher", publishers, "Publishers to this node"))
-	clonedForm.AddField(xep0004.NewFieldJidSingle("pubsub#creator", nodeMeta.Creator, "Node creator")) // TODO
-	clonedForm.AddField(xep0004.NewFieldJidSingle("pubsub#creation_date", nodeMeta.CreateDate.Format("2006-01-02T15:04:05Z"), "Creation date")) // TODO
+	clonedForm.AddField(xep0004.NewFieldJidSingle("pubsub#creator", nodeMeta.Creator, "Node creator"))
+	clonedForm.AddField(xep0004.NewFieldJidSingle("pubsub#creation_date", nodeMeta.CreateDate.Format("2006-01-02T15:04:05Z"), "Creation date"))
 
 	elemIdentity := xmpp.NewElementName("identity")
 	elemIdentity.SetAttribute("category", "pubsub")
@@ -135,11 +139,62 @@ func (s *DiscoveryModule) processDiscoItems(stanza xmpp.XElement, stm stream.C2S
 	stan := stanza.(xmpp.Stanza)
 	fromJID := stan.FromJID()
 	toJID := stan.ToJID()
+	query := stan.Elements().ChildNamespace("query", "http://jabber.org/protocol/disco#items")
+	nodeName := strings.Trim(query.Attributes().Get("node"), " ")
+	id := stanza.ID()
 
 	resultIq := xmpp.NewElementName(stanza.Name())
 	resultIq.SetTo(fromJID.String())
 	resultIq.SetFrom(toJID.String())
+	resultIq.SetAttribute("id", id)
+	resultIq.SetAttribute("type", "result")
 	resultQuery := xmpp.NewElementNamespace("query", "http://jabber.org/protocol/disco#items")
+	resultQuery.SetAttribute("node", nodeName)
+
+	nodeConfig := repository.Repository().GetNodeConfig(*toJID, nodeName)
+	if nodeName != "" && nodeConfig == nil {
+		return base.NewPubSubErrorStanza(stan, xmpp.ErrItemNotFound, nil)
+	}
+
+	if (nodeName == "") || (nodeConfig != nil && nodeConfig.GetNodeType() == enums.Collection) {
+		if nodeConfig != nil && nodeConfig.GetNodeType() == enums.Collection {
+			errElem := xmpp.NewElementNamespace("unsupported", "http://jabber.org/protocol/pubsub#errors")
+			errElem.SetAttribute("feature", "pubsub#collections")
+			return base.NewPubSubErrorStanza(stan, xmpp.ErrFeatureNotImplemented,
+				[]xmpp.XElement{
+					errElem,
+				})
+		}
+
+		nodes, err := repository.Repository().GetChildNodes(*toJID.ToBareJID(), nodeName)
+		if err != nil {
+			log.Printf("GetChildNodes error:" + err.Error())
+		}
+		for _, loopNode := range nodes {
+			childNodeConfig := repository.Repository().GetNodeConfig(*toJID.ToBareJID(), loopNode)
+			if childNodeConfig != nil {
+				name := childNodeConfig.Form().Title
+				if name == "" {
+					name = loopNode
+				}
+				elemItem := xmpp.NewElementName("item")
+				elemItem.SetAttribute("jid", toJID.ToBareJID().String())
+				elemItem.SetAttribute("node", loopNode)
+				elemItem.SetAttribute("name", name)
+
+				resultQuery.AppendElement(elemItem)
+			}
+		}
+
+	} else {
+		itemIds, _ := repository.Repository().GetItemIds(*toJID.ToBareJID(), nodeName)
+		for _, itemId := range itemIds {
+			elemItem := xmpp.NewElementName("item")
+			elemItem.SetAttribute("jid", toJID.ToBareJID().String())
+			elemItem.SetAttribute("name", itemId)
+			resultQuery.AppendElement(elemItem)
+		}
+	}
 
 	resultIq.AppendElement(resultQuery)
 	stm.SendElement(resultIq)

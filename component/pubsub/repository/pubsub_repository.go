@@ -253,3 +253,7 @@ func (ps *pubSubRepository) GetItemIds(serviceJid jid.JID, nodeName string) ([]s
 	}
 	return ps.dao.GetItemIds(node.GetNodeId())
 }
+
+func (ps *pubSubRepository) GetChildNodes(serviceJid jid.JID, nodeName string) ([]string, error) {
+	return ps.dao.GetChildNodes(serviceJid, nodeName)
+}
