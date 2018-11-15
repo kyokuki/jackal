@@ -257,3 +257,7 @@ func (ps *pubSubRepository) GetItemIds(serviceJid jid.JID, nodeName string) ([]s
 func (ps *pubSubRepository) GetChildNodes(serviceJid jid.JID, nodeName string) ([]string, error) {
 	return ps.dao.GetChildNodes(serviceJid, nodeName)
 }
+
+func (ps *pubSubRepository) GetUserRoster(owner jid.JID) ([]model.UserRosterItem, error) {
+	return ps.dao.GetUserRoster(owner)
+}

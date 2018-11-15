@@ -71,9 +71,7 @@ func (s *UnsubscribeNodeModule) Process(packet xmpp.Stanza, stm stream.C2S) *bas
 	nodeSubscriptions := repository.Repository().GetNodeSubscriptions(*toJID.ToBareJID(), nodeName)
 	subscription := nodeSubscriptions.GetSubscription(*jid.ToBareJID())
 
-	if senderAffiliation.GetAffiliation() != enums.AffiliationOwner &&
-	// TODO tiages : (!this.config.isAdmin(senderJid)) &&
-		(jidErr != nil || jid.ToBareJID().String() != fromJID.ToBareJID().String()) {
+	if (senderAffiliation.GetAffiliation() != enums.AffiliationOwner) && (jidErr != nil || jid.ToBareJID().String() != fromJID.ToBareJID().String()) {
 		tmpErrElem := xmpp.NewElementNamespace("invalid-jid", "http://jabber.org/protocol/pubsub#errors")
 		return base.NewPubSubErrorStanza(packet, xmpp.ErrBadRequest,
 			[]xmpp.XElement{

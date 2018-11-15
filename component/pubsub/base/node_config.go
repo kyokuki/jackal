@@ -18,6 +18,7 @@ type AbstractNodeConfig interface {
 	IsDeliverPresenceBased() bool
 
 	Clone() AbstractNodeConfig
+	GetRosterGroupsAllowed() []string
 }
 
 type NodeConfigType struct {
@@ -169,4 +170,9 @@ func (af *NodeConfigType) Clone() AbstractNodeConfig {
 	}
 	ins.Form().CopyValuesFromDataForm(af.Form())
 	return ins
+}
+
+func (af *NodeConfigType) GetRosterGroupsAllowed() []string {
+	_, rosterGroupsAllowed := af.Form().Field("pubsub#roster_groups_allowed")
+	return rosterGroupsAllowed.Values
 }

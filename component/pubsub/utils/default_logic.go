@@ -7,6 +7,8 @@ import (
 	"github.com/ortuman/jackal/component/pubsub/repository/cached"
 	"github.com/ortuman/jackal/component/pubsub/repository"
 	"github.com/ortuman/jackal/component/pubsub/enums"
+	"log"
+	"github.com/ortuman/jackal/model/rostermodel"
 )
 
 type privatePubSubLogic struct {
@@ -16,12 +18,78 @@ type privatePubSubLogic struct {
 var DefaultPubSubLogic privatePubSubLogic
 
 func (psl *privatePubSubLogic) HasSenderSubscription(jid jid.JID, nodeAffiations *cached.NodeAffiliations, nodeSubscriptions *cached.NodeSubscriptions) bool {
-	// TODO
+
+	for _, userAff := range nodeAffiations.GetAffiliations() {
+		if userAff.GetAffiliation() != enums.AffiliationOwner {
+			continue
+		}
+
+		if jid.ToBareJID().String() == userAff.GetJid().String() {
+			return true
+		}
+
+		// TODO start
+		// I'm not sure whether the checks below if right
+		buddies, err := repository.Repository().GetUserRoster(*userAff.GetJid())
+		if err != nil {
+			log.Printf("GetUserRoster err :" + err.Error())
+			return false
+		}
+		for _, buddy := range buddies {
+			if buddy.JID != jid.ToBareJID().String() {
+				continue
+			}
+			if buddy.Subscription == rostermodel.SubscriptionBoth || buddy.Subscription == rostermodel.SubscriptionFrom {
+				return true
+			}
+		}
+		// TODO end
+	}
 	return false
 }
 
 func (psl *privatePubSubLogic) IsSenderInRosterGroup(jid jid.JID, nodeConfig base.AbstractNodeConfig, nodeAffiations *cached.NodeAffiliations, nodeSubscriptions *cached.NodeSubscriptions) bool {
-	// TODO
+	userSubscribers := nodeSubscriptions.GetSubscriptions()
+	groupsAllowedArr := nodeConfig.GetRosterGroupsAllowed()
+	if len(groupsAllowedArr) == 0 {
+		return true
+	}
+
+	for _, owner := range userSubscribers {
+		aff := nodeAffiations.GetSubscriberAffiliation(*owner.GetJid())
+		if aff.GetAffiliation() != enums.AffiliationOwner {
+			continue
+		}
+
+		if jid.ToBareJID().String() == owner.GetJid().ToBareJID().String() {
+			return true
+		}
+
+		// TODO start
+		// I'm not sure whether the checks below if right
+		buddies, err := repository.Repository().GetUserRoster(*owner.GetJid())
+		if err != nil {
+			log.Printf("GetUserRoster err :" + err.Error())
+			return false
+		}
+		for _, buddy := range buddies {
+			if buddy.JID != jid.ToBareJID().String() {
+				continue
+			}
+			if len(buddy.Groups) == 0 {
+				continue
+			}
+			for _,  group := range buddy.Groups {
+				for _, tmpAllowGroup := range groupsAllowedArr {
+					if tmpAllowGroup == group {
+						return true
+					}
+				}
+			}
+		}
+		// TODO end
+	}
+
 	return false
 }
 

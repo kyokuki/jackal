@@ -171,9 +171,10 @@ func (s *ManageAffiliationsModule) processSet(packet xmpp.Stanza, nodeAffiliatio
 	}
 
 	// TODO Notify Changed Subscription Affiliation by jackal's configuration
-	//for mapJid, mapSub := range changedSubscriptions {
-	//	// do notify
-	//}
+	for mapJid, mapAff := range changedAffiliations {
+		msgToSend := s.createAffiliationNotification(*toJID.ToBareJID(), mapJid, nodeName, mapAff)
+		GetStreamC2S().SendElement(msgToSend)
+	}
 
 	GetStreamC2S().SendElement(resultStanza)
 	return nil
@@ -196,4 +197,21 @@ func (s *ManageAffiliationsModule) checkPrivileges(packet xmpp.Stanza, stanzaTyp
 		//}
 	}
 	return allowed
+}
+
+func (s *ManageAffiliationsModule) createAffiliationNotification(fromJID jid.JID, toJID jid.JID, nodeName string, affiliation enums.AffiliationType) xmpp.XElement {
+	messageElem := xmpp.NewElementName("message")
+	messageElem.SetAttribute("from", fromJID.String())
+	messageElem.SetAttribute("to", toJID.String())
+	pubsubElem := xmpp.NewElementNamespace("pubsub", "http://jabber.org/protocol/pubsub")
+	affilationsElem := xmpp.NewElementName("affiliations")
+	affilationsElem.SetAttribute("node", nodeName)
+	affElem := xmpp.NewElementName("affilation")
+	affElem.SetAttribute("jid", toJID.ToBareJID().String())
+	affElem.SetAttribute("affiliation", affiliation.String())
+
+	affilationsElem.AppendElement(affElem)
+	pubsubElem.AppendElement(affilationsElem)
+	messageElem.AppendElement(pubsubElem)
+	return messageElem
 }

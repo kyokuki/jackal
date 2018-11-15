@@ -29,4 +29,6 @@ type IPubSubDao interface {
 	WriteItem(serviceJid jid.JID, nodeId int64, nodeName string, itemId string, publisherJid jid.JID, itemData string) (error)
 	DeleteItem(serviceJid jid.JID, nodeId int64, itemId string) (error)
 	GetItemIds(nodeId int64) ([]string, error)
+
+	GetUserRoster(owner jid.JID) ([]model.UserRosterItem, error)
 }

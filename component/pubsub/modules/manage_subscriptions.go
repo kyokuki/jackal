@@ -179,7 +179,7 @@ func (s *ManageSubscriptionsModule) processSet(packet xmpp.Stanza, nodeSubscript
 func (s *ManageSubscriptionsModule) checkPrivileges(packet xmpp.Stanza, stanzaType string, senderJid jid.JID, nodeConfig base.AbstractNodeConfig, nodeAffiliations *cached.NodeAffiliations, nodeSubscriptions *cached.NodeSubscriptions) bool {
 	allowed := false
 	if !allowed {
-		if strings.ToLower(stanzaType) == "get" /* && nodeConfig.isAllowToViewSubscribers() */ {
+		if strings.ToLower(stanzaType) == "get" {
 			senderSubscription := nodeSubscriptions.GetSubscription(senderJid)
 			if senderSubscription == enums.SubscriptionSubscribed {
 				allowed = true
