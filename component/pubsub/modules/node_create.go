@@ -36,6 +36,11 @@ func (s *NodeCreateModule) Features(toJID, fromJID *jid.JID, node string) ([]xep
 		"http://jabber.org/protocol/pubsub#create-nodes",
 		"http://jabber.org/protocol/pubsub#instant-nodes",
 		"http://jabber.org/protocol/pubsub#create-and-configure",
+		"http://jabber.org/protocol/pubsub#access-authorize",
+		"http://jabber.org/protocol/pubsub#access-open",
+		"http://jabber.org/protocol/pubsub#access-presence",
+		"http://jabber.org/protocol/pubsub#access-roster",
+		"http://jabber.org/protocol/pubsub#access-whitelist",
 	}, nil
 }
 

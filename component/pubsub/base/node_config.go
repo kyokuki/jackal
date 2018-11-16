@@ -114,8 +114,6 @@ func (af *NodeConfigType) initForm() {
 		"Roster groups allowed to subscribe"))
 	af.form.AddField(xep0004.NewFieldBool(PUBSUB+"notify_sub_aff_state", false,
 		"Notify subscribers when owner change their subscription or affiliation state"))
-	af.form.AddField(xep0004.NewFieldBool(PUBSUB+"presence_based_delivery", true,
-		"Whether to deliver notifications to available users only"))
 }
 
 
@@ -153,8 +151,10 @@ func (af *NodeConfigType) GetPublisherModel() enums.PublisherModelType {
 
 func (af *NodeConfigType) IsDeliverPresenceBased() bool {
 	_, delivery := af.Form().Field("pubsub#presence_based_delivery")
-	if len(delivery.Values) > 0 && delivery.Values[0] == "1" {
-		return true
+	if len(delivery.Values) > 0 {
+		if delivery.Values[0] =="true" || delivery.Values[0] == "1" {
+			return true
+		}
 	}
 	return false
 }
