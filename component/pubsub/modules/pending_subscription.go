@@ -104,7 +104,8 @@ func (s *PendingSubscriptionModule) Process(packet xmpp.Stanza, stm stream.C2S) 
 		return nil
 	}
 
-	affiliation := nodeAffiliations.GetSubscriberAffiliation(*fromJID.ToBareJID()).GetAffiliation()
+	subscriberAffiliation := nodeAffiliations.GetSubscriberAffiliation(*fromJID.ToBareJID())
+	affiliation := subscriberAffiliation.GetAffiliation()
 
 	if valueAllowString == "true" {
 		subscription = enums.SubscriptionSubscribed
@@ -147,7 +148,7 @@ func (s *PendingSubscriptionModule) Process(packet xmpp.Stanza, stm stream.C2S) 
 }
 
 
-func (s *PendingSubscriptionModule) SendAuthorizationRequest(nodeName string, fromJid jid.JID, subId string, subscriberJid jid.JID, nodeAffiliations cached.NodeAffiliations) ([]xmpp.XElement) {
+func (s *PendingSubscriptionModule) SendAuthorizationRequest(nodeName string, fromJid jid.JID, subId string, subscriberJid jid.JID, nodeAffiliations *cached.NodeAffiliations) ([]xmpp.XElement) {
 	formX := xep0004.DataForm{}
 	formX.Type = "form"
 	formX.Title = "PubSub subscriber request"
