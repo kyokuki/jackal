@@ -10,6 +10,7 @@ import (
 	"github.com/ortuman/jackal/component/pubsub/enums"
 	"github.com/ortuman/jackal/component/pubsub/utils"
 	"strings"
+	"log"
 )
 
 type SubscribeNodeModule struct{}
@@ -134,6 +135,7 @@ func (s *SubscribeNodeModule) Process(packet xmpp.Stanza, stm stream.C2S) *base.
 		})
 	}
 
+	var results []xmpp.XElement
 	var newSubscription enums.SubscriptionType
 	nodeUserAffiliation := nodeAffiliations.GetSubscriberAffiliation(*jid.ToBareJID())
 	affiliation := nodeUserAffiliation.GetAffiliation()
@@ -188,7 +190,21 @@ func (s *SubscribeNodeModule) Process(packet xmpp.Stanza, stm stream.C2S) *base.
 		if (accessModel == enums.AccessModelAuthorize) &&
 			(false || // replace [false] witch [!(this.config.isAdmin(senderJid)]
 				senderAffiliation.GetAffiliation() == enums.AffiliationOwner) {
-			// TODO tigase : this.pendingSubscriptionModule.sendAuthorizationRequest
+
+			pendingSubscriptionModule := GetModuleInstance("PendingSubscriptionModule")
+			if pendingSubscriptionModule != nil {
+				pendingSubscriptionModuleIns, ok := pendingSubscriptionModule.(*PendingSubscriptionModule)
+				if ok {
+					tmpArr := pendingSubscriptionModuleIns.SendAuthorizationRequest(nodeName, *toJID.ToBareJID(), subid, *jid, nodeAffiliations)
+					results = append(results, tmpArr...)
+
+				} else {
+					log.Printf("PendingSubscriptionModule Instance not found")
+				}
+			} else {
+				log.Printf("PendingSubscriptionModule Instance not found")
+			}
+
 		}
 		// TODO sendLastPublishedItem
 		// sendLastPublishedItem = nodeConfig.getSendLastPublishedItem() == SendLastPublishedItem.on_sub ||
@@ -207,7 +223,12 @@ func (s *SubscribeNodeModule) Process(packet xmpp.Stanza, stm stream.C2S) *base.
 	}
 
 	resultStanza.AppendElement(s.makeSubscription(nodeName, *jid, newSubscription, subid))
-	stm.SendElement(resultStanza)
+	results = append(results, resultStanza)
+
+	for _, toSend := range results {
+		stm.SendElement(toSend)
+	}
+
 	if sendLastPublishedItem {
 		// TODO
 		// publishItemModule.publishLastItem(serviceJid, nodeConfig, JID.jidInstance(jid))

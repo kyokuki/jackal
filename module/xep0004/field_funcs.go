@@ -1,6 +1,9 @@
 package xep0004
 
-import "github.com/pkg/errors"
+import (
+	"github.com/pkg/errors"
+	"strings"
+)
 
 func NewFieldBool(fvar string, value bool, label string) Field {
 	field := Field{
@@ -132,4 +135,26 @@ func NewFieldTextPrivate(fvar string, value string, label string) Field {
 	}
 
 	return field
+}
+
+func (f *Field) GetAsString() string {
+	if len(f.Values) > 0 {
+		return f.Values[0]
+	}
+	return ""
+}
+
+func (f *Field) GetAsBooleanString() string {
+	if len(f.Values) > 0 {
+		if "1" == f.Values[0] || "true" == strings.ToLower(f.Values[0]) {
+			return "true"
+		} else {
+			return "false"
+		}
+	}
+	return ""
+}
+
+func (f *Field) GetAsStrings() []string {
+	return f.Values
 }

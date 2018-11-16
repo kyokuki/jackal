@@ -52,6 +52,7 @@ func (c *PubSub)initModules()  {
 	modules.AppendSubModule("RetractItemModule", &modules.RetractItemModule{})
 	modules.AppendSubModule("PurgeItemsModule", &modules.PurgeItemsModule{})
 	modules.AppendSubModule("DefaultConfigModule", &modules.DefaultConfigModule{})
+	modules.AppendSubModule("PendingSubscriptionModule", &modules.PendingSubscriptionModule{})
 }
 
 func (c *PubSub) Host() string {
